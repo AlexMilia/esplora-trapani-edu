@@ -1,0 +1,1801 @@
+<?php
+/* =====================================================================
+   REGIA EDU — regia-edu.php (guscio PHP della regia)
+   Stesso file della regia HTML, ma URL e anon key di Supabase vengono
+   letti da dati/config.php: UNA sola configurazione per player e regia,
+   nessuna chiave scritta nel file. L'accesso resta quello di Supabase
+   Auth (login e-mail/password, ruoli in edu_utenti, RLS sul DB).
+   Va caricato accanto a index.php/api.php (dove esiste dati/config.php).
+   ===================================================================== */
+define('EDU_OK', 1);
+if (($_SERVER['HTTP_HOST'] ?? '') === 'alessandromilia.it') { header('Location: https://www.alessandromilia.it' . ($_SERVER['REQUEST_URI'] ?? '/'), true, 301); exit; }
+if (is_file(__DIR__ . '/dati/config.php')) { require __DIR__ . '/dati/config.php'; }
+/* fallback: se il config non definisce le variabili Supabase, uso i valori
+   di ASK Trapani incorporati (la anon key è pubblica; la sicurezza sta in
+   RLS + Supabase Auth con i ruoli di edu_utenti) */
+if (empty($SUPA_URL))  $SUPA_URL  = 'https://sdqzqzmkhbkkibjzauox.supabase.co';
+if (empty($SUPA_ANON)) $SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkcXpxem1raGJra2lianphdW94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzM4NDYsImV4cCI6MjA5MDY0OTg0Nn0.SQ-de_vaL4op7BXLRg7YjUUP0H03-k4Ym2k0W4h9huE';
+header('X-Content-Type-Options: nosniff');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+header('X-Frame-Options: SAMEORIGIN');
+?>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Regia EDU — Sale in Classe</title>
+<link rel="icon" href="https://www.alessandromilia.it/project/saline/cristalli_di_sale.png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+<style>
+  :root{--rosa:#e8788a;--rosaTxt:#b8506a;--oro:#9a7527;--oroChiaro:#c9a15a;--ink:#3a2e2a;
+        --sale:#faf7f2;--carta:#ffffff;--linea:#e8dfd2;--verde:#5a8a5a;--rosso:#b34a4a}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--sale);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px}
+  button{font-family:inherit;cursor:pointer}
+  input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink);background:#fff;
+    border:1px solid var(--linea);border-radius:10px;padding:9px 12px;width:100%}
+  textarea{min-height:74px;resize:vertical;line-height:1.5}
+  label{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--oro);margin:12px 0 5px}
+  button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--oroChiaro);outline-offset:1px}
+
+  .top{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:12px;
+    background:var(--carta);border-bottom:1px solid var(--linea);padding:12px 18px}
+  .top .logo{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:.03em}
+  .top .logo em{color:var(--rosaTxt);font-style:normal}
+  .top img{height:26px}
+  .top .sp{margin-left:auto}
+  .top .who{font-size:12px;opacity:.7}
+  .btn{border:none;border-radius:999px;padding:9px 16px;font-size:13px;font-weight:700;background:#efe8db;color:var(--ink)}
+  .btn.rosa{background:var(--rosaTxt);color:#fff}
+  .btn.oro{background:var(--oro);color:var(--ink)}   /* bianco su oro = 2.4:1, sotto AA; ink su oro = 5.4:1 */
+  .btn.ghost{background:transparent;border:1px solid var(--linea)}
+  .btn.mini{padding:5px 10px;font-size:12px}
+  .btn.danger{background:#f7e9e9;color:var(--rosso)}
+  .btn:disabled{opacity:.45;cursor:default}
+
+  .wrap{display:grid;grid-template-columns:300px 1fr;gap:18px;padding:18px;max-width:1500px;margin:0 auto}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr}}
+
+  .card{background:var(--carta);border:1px solid var(--linea);border-radius:18px;padding:18px;margin-bottom:16px}
+  .card h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--rosaTxt);margin-bottom:8px}
+  .hint{font-size:12px;opacity:.65;line-height:1.5}
+  .chk{display:flex;align-items:center;gap:8px;font-size:14px;margin-top:10px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:400}
+  .chk input{width:18px;height:18px;margin:0}
+  .lisIn{font-size:12px;padding:4px 8px;width:220px}
+  .mascGrid{display:grid;grid-template-columns:150px 1fr 1fr 1fr;gap:8px 10px;align-items:center;margin-top:10px}
+  .mascGrid .hd{font-size:11px;font-weight:800;letter-spacing:.06em;opacity:.55;text-transform:uppercase}
+  .mascGrid .k{font-size:13px;font-weight:700}
+  .mascGrid .k small{display:block;font-weight:400;opacity:.6;font-size:11px}
+  .mascGrid input[type=text]{margin:0;font-size:12px;padding:6px 8px;width:100%}
+  .mascCell{display:flex;gap:6px;align-items:center}
+  .mascCell input[type=checkbox]{width:16px;height:16px;margin:0}
+  .progTag{font-size:10px;font-weight:800;letter-spacing:.05em;border-radius:999px;padding:2px 7px;background:#e6eef4;color:var(--blu,#2e6e8e);margin-left:6px}
+
+  /* sidebar */
+  .lezItem{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;
+    border:1px solid transparent;border-radius:12px;padding:10px}
+  .lezItem:hover{background:var(--sale)}
+  .lezItem.on{background:var(--sale);border-color:var(--linea)}
+  .lezItem .em{font-size:22px}
+  .lezItem .t{font-weight:700;font-size:14px}
+  .lezItem .s{font-size:11px;opacity:.6}
+  .badge{font-size:10px;font-weight:800;letter-spacing:.05em;border-radius:999px;padding:3px 8px;margin-left:auto}
+  .badge.pub{background:#e9f2e9;color:var(--verde)}
+  .badge.bozza{background:#f4ecdd;color:var(--oro)}
+  .badge.soon{background:#eee7f0;color:#7a5f86}
+  .sez{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;opacity:.5;margin:14px 4px 6px}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 14px}
+  @media(max-width:700px){.grid2,.grid3{grid-template-columns:1fr}}
+  /* la Regia è pensata per il desktop: su telefono l'editor delle scene 360,
+     le tabelle delle statistiche e la playlist non sono usabili davvero.
+     Meglio dirlo che lasciare l'utente a combattere con il pinch-to-zoom. */
+  #soloDesktop{display:none}
+  @media(max-width:820px){
+    #soloDesktop{display:block;background:#fff8ec;border:2px solid var(--oro);border-radius:14px;
+      padding:14px 16px;margin:12px;font-size:14px;line-height:1.5;color:var(--ink)}
+    .col-side{max-height:38vh;overflow:auto}
+    table{display:block;overflow-x:auto;white-space:nowrap}
+  }
+  .col-side{scrollbar-width:thin}
+
+  /* media */
+  .mediaRow{display:flex;align-items:center;gap:8px;border:1px solid var(--linea);border-radius:12px;
+    padding:9px 12px;margin-top:8px;font-size:13px}
+  .mediaRow.on{border-color:var(--rosaTxt);background:#fdf6f7}
+  .mediaRow .tag{font-size:10px;font-weight:800;background:var(--sale);border-radius:6px;padding:3px 6px}
+  .mediaRow .g{font-family:monospace;font-size:11px;opacity:.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+
+  /* editor 360 */
+  #viewerBox{position:relative;border-radius:14px;overflow:hidden;background:#0b0d10;aspect-ratio:2/1;min-height:300px;user-select:none}
+  #edVid,#edImg{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:fill;background:#000}
+  #edOverlay{position:absolute;inset:0;cursor:crosshair}
+  #edOverlay.noplace{cursor:default}
+  #edGrid{position:absolute;inset:0;pointer-events:none;opacity:.35;
+    background-image:linear-gradient(rgba(255,255,255,.35) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.35) 1px,transparent 1px);
+    background-size:25% 50%}
+  #edGrid::after{content:'';position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border:2px solid #fff;border-radius:50%;opacity:.8}
+  .mk{position:absolute;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:#fff;border:3px solid var(--rosa);
+    display:flex;align-items:center;justify-content:center;font-size:16px;cursor:grab;box-shadow:0 2px 10px rgba(0,0,0,.6);z-index:3}
+  .mk.on{border-color:var(--oro);box-shadow:0 0 0 4px rgba(201,161,90,.45),0 2px 10px rgba(0,0,0,.6);z-index:4}
+  .mk.drag{cursor:grabbing;opacity:.8}
+  .mk small{position:absolute;top:36px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:10px;font-weight:700;
+    background:rgba(0,0,0,.75);color:#fff;border-radius:6px;padding:2px 6px;pointer-events:none}
+  #edHud{position:absolute;left:8px;bottom:8px;z-index:6;background:rgba(0,0,0,.72);color:#9fe89f;font:11px/1.5 monospace;border-radius:8px;padding:6px 10px;pointer-events:none}
+  #edTools{position:absolute;right:8px;top:8px;z-index:6;display:flex;gap:6px}
+  #edTools button{font:11px monospace;border:0;border-radius:6px;padding:4px 8px;cursor:pointer;background:rgba(255,255,255,.9)}
+  #edTools button.on{background:var(--oro);color:#fff}
+  #placingBanner{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:5;
+    background:rgba(184,80,106,.95);color:#fff;font-size:13px;font-weight:700;border-radius:999px;
+    padding:7px 16px;display:none}
+  #tl{display:flex;align-items:center;gap:10px;margin-top:10px}
+  #tlRange{flex:1;accent-color:var(--rosaTxt);height:26px}
+  #tlTime{font-variant-numeric:tabular-nums;font-size:12px;white-space:nowrap}
+  #tlDotsWrap{position:relative;height:12px;margin:2px 6px 0}
+  .tlDot{position:absolute;top:0;width:10px;height:10px;border-radius:50% 50% 46% 46%;
+    background:#fff;border:2px solid var(--rosaTxt);transform:translateX(-50%);cursor:pointer}
+  .tlDot.on{background:var(--rosaTxt)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .chip{border:1px solid var(--linea);background:#fff;border-radius:999px;padding:7px 13px;font-size:13px}
+  .chip.on{background:var(--rosaTxt);border-color:var(--rosaTxt);color:#fff;font-weight:700}
+  .chip .x{opacity:.6;margin-left:6px}
+
+  .hotRow{display:flex;align-items:center;gap:8px;border:1px solid var(--linea);border-radius:12px;
+    padding:8px 12px;margin-top:8px;font-size:13px}
+  .hotRow.on{border-color:var(--oro);background:#fbf7ee}
+  .val{font-size:10px;font-weight:800;border-radius:999px;padding:3px 8px}
+  .val.ok{background:#e9f2e9;color:var(--verde)}
+  .val.no{background:#f7ecec;color:var(--rosso)}
+
+  /* quiz */
+  .qCard{border:1px solid var(--linea);border-radius:14px;padding:14px;margin-top:10px}
+  .optRow{display:flex;gap:8px;align-items:center;margin-top:7px}
+  .optRow input[type=radio]{width:auto}
+
+  #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:80;
+    background:var(--ink);color:#fff;border-radius:999px;padding:10px 20px;font-size:13px;
+    opacity:0;transition:opacity .3s;pointer-events:none}
+  #toast.on{opacity:1}
+
+  /* login / config */
+  .gate{max-width:420px;margin:9vh auto;background:var(--carta);border:1px solid var(--linea);
+    border-radius:20px;padding:30px;text-align:center}
+  .gate img{width:70px}
+  .gate h1{font-size:22px;margin:10px 0 4px}
+  .gate h1 em{color:var(--rosaTxt);font-style:normal}
+  .gate p{font-size:13px;opacity:.7;margin-bottom:14px}
+  .gate input{margin-top:8px;text-align:center}
+  .gate .btn{margin-top:14px;width:100%;padding:12px}
+  .err{color:var(--rosso);font-size:13px;margin-top:10px;min-height:18px}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- CONFIG mancante -->
+<div class="gate hidden" id="gateConfig">
+  <img src="https://www.alessandromilia.it/project/saline/cristalli_di_sale.png" alt="" onerror="this.remove()">
+  <h1>Regia <em>EDU</em></h1>
+  <p>Configurazione incompleta: apri il file e incolla la <b>anon key</b> di ASK Trapani nella costante <code>SUPA_ANON</code> in cima allo script.</p>
+</div>
+
+<!-- LOGIN -->
+<div class="gate hidden" id="gateLogin">
+  <img src="https://www.alessandromilia.it/project/saline/cristalli_di_sale.png" alt="" onerror="this.remove()">
+  <h1>Regia <em>EDU</em></h1>
+  <p>Sale in Classe · pannello contenuti</p>
+  <input id="loginEmail" type="email" placeholder="la tua e-mail (es. nome@gmail.com)" autocomplete="username" onkeydown="if(event.key==='Enter')$('loginPass').focus()">
+  <input id="loginPass" type="password" placeholder="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()">
+  <button class="btn rosa" onclick="login()">Entra</button>
+  <div class="err" id="loginErr"></div>
+  <p class="hint" style="margin-top:12px">Si entra con l'<b>e-mail</b> dell'account, non con un nome utente.<br>
+  <a href="#" onclick="recupero();return false" style="color:#b8506a;font-weight:700">Password dimenticata?</a></p>
+  <div class="hint hidden" id="recOk" style="margin-top:8px;color:#2f7a46;font-weight:700"></div>
+</div>
+
+<!-- nuova password (arrivo dal link di recupero) -->
+<div class="gate hidden" id="gateNuovaPass">
+  <img src="https://www.alessandromilia.it/project/saline/cristalli_di_sale.png" alt="" onerror="this.remove()">
+  <h1>Nuova <em>password</em></h1>
+  <p>Scegli la nuova password per il tuo account della regia.</p>
+  <input id="npPass" type="password" placeholder="nuova password (almeno 8 caratteri)" autocomplete="new-password">
+  <input id="npPass2" type="password" placeholder="ripeti la nuova password" autocomplete="new-password" onkeydown="if(event.key==='Enter')nuovaPassword()">
+  <button class="btn rosa" onclick="nuovaPassword()">Salva e entra</button>
+  <div class="err" id="npErr"></div>
+</div>
+
+<!-- utente senza ruolo -->
+<div class="gate hidden" id="gateNoRole">
+  <h1>Utente non abilitato</h1>
+  <p>Il tuo account esiste ma non è ancora registrato in <code>edu_utenti</code>. Chiedi all'amministratore di abilitarti.</p>
+  <button class="btn" onclick="logout()">Esci</button>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <div class="top">
+    <span class="logo"><img src="https://www.alessandromilia.it/project/saline/cristalli_di_sale.png" alt="" onerror="this.remove()">REGIA <em>EDU</em> · Sale in Classe <span style="font-size:10px;font-weight:800;background:#efe8db;border-radius:999px;padding:3px 8px;margin-left:6px">v17.1 · abbonamenti</span></span>
+    <span class="sp"></span>
+    <span class="who" id="whoami"></span>
+    <button class="btn mini" onclick="logout()">Esci</button>
+  </div>
+
+  <div class="wrap">
+    <!-- SIDEBAR -->
+    <div>
+      <div class="card">
+        <button class="btn rosa" style="width:100%" onclick="nuovaLezione()">＋ Nuova lezione</button>
+        <button class="btn ghost" style="width:100%;margin-top:8px" id="btnStats" onclick="apriStats()">📊 Statistiche</button>
+        <button class="btn ghost" style="width:100%;margin-top:8px" id="btnScuole" onclick="apriScuole()">🏫 Scuole e classi</button>
+        <button class="btn ghost" style="width:100%;margin-top:8px" id="btnCorsi" onclick="apriCorsi()">📚 Corsi</button>
+        <button class="btn ghost hidden" style="width:100%;margin-top:8px" id="btnClienti" onclick="apriClienti()">🏢 Clienti &amp; Licenze</button>
+        <button class="btn ghost" style="width:100%;margin-top:8px" id="btnMasc" onclick="apriMascotte()">🎭 Mascotte &amp; progetti</button>
+        <div id="soloDesktop">📱 <b>Sei su uno schermo piccolo.</b> La Regia funziona, ma editor delle scene 360, playlist e statistiche sono pensati per il computer: da telefono usa pure le <b>statistiche</b> e i <b>link delle classi</b>, per il resto ti conviene un desktop.</div>
+        <input id="filtroLez" placeholder="🔎 Filtra lezioni, corsi, clienti…" style="width:100%;margin:8px 0;padding:8px 10px;border:2px solid var(--linea);border-radius:10px;font:inherit" oninput="filtraSidebar(this.value)">
+        <div class="sez">Lezioni ufficiali</div>
+        <div id="listUff"></div>
+        <div class="sez" id="mieTitle">Le mie lezioni</div>
+        <div id="listMie"></div>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div id="editor">
+      <div class="card" id="benv">
+        <h2>Benvenuto in regia</h2>
+        <p class="hint">Scegli una lezione dalla colonna a sinistra, o creane una nuova. Da qui gestisci titoli, video 360, foto 360, tappe con hotspot (piazzandoli con un click nella scena) e i quiz nei due livelli.</p>
+      </div>
+
+      <!-- MASCOTTE & PROGETTI -->
+      <div id="mascPanel" class="hidden">
+        <div class="card">
+          <h2>🎭 Mascotte &amp; progetti</h2>
+          <p class="hint">Ogni progetto (saline, mestieri…) ha il suo personaggio. Decidi se i video della mascotte vanno mostrati alla <b>Primaria</b> e/o alle <b>Medie</b>, e incolla i video per ogni momento: la colonna <b>Entrambi</b> vale per tutti, una cella Primaria/Medie compilata vince su Entrambi. Formati: URL/ID YouTube oppure <code>bunny:GUID</code>. Le modifiche arrivano in classe entro 5 minuti (cache del player).</p>
+          <div class="grid2">
+            <div><label>Progetto</label><select id="mProg" onchange="caricaMascotte()"></select></div>
+            <div><label>Nome del progetto</label><input id="mNome"></div>
+          </div>
+          <div class="grid2">
+            <div><label>Nome della mascotte</label><input id="mMascNome" placeholder="es. Coccio di sale"></div>
+            <div><label>Immagine mascotte (PNG trasparente)</label><input id="mMascImg" placeholder="https://…/mascotte.png"></div>
+          </div>
+          <div style="display:flex;gap:18px;flex-wrap:wrap">
+            <label class="chk"><input type="checkbox" id="mJun"> Mostra i video alla <b>Primaria · 8–10</b></label>
+            <label class="chk"><input type="checkbox" id="mSen"> Mostra i video alle <b>Medie · 11–13</b></label>
+            <label class="chk"><input type="checkbox" id="mQuiz"> Video giusta/sbagliata <b>a ogni risposta</b> (altrimenti solo la prima volta)</label>
+          </div>
+          <div class="mascGrid" id="mascGrid"></div>
+          <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+            <button class="btn oro" onclick="salvaMascotte()">Salva mascotte</button>
+            <button class="btn ghost" onclick="testMascotte()">▶ Prova nel player</button>
+            <span style="flex:1"></span>
+            <button class="btn ghost" onclick="chiudiMascotte()">Chiudi</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANNELLO STATISTICHE (Fase 4) -->
+      <div id="statsPanel" class="hidden">
+        <div class="card">
+          <h2>📊 Statistiche <span class="hint" style="font-weight:400">— cosa hanno fatto le classi</span></h2>
+          <p class="hint">Dati anonimi per <b>codice classe</b> (nessun alunno è identificato). Dai un nome ai codici in «🏫 Le classi» per leggere «5ª A» invece di «TP-IC12-5A». Le percentuali sono la media delle risposte giuste di classe nei quiz (classici e live).</p>
+          <div class="grid2" style="align-items:end">
+            <div><label>Cliente</label><select id="stCliente" onchange="caricaStats()"></select></div>
+            <div><button class="btn ghost" onclick="caricaStats()">↻ Aggiorna</button> <button class="btn ghost" onclick="chiudiPannello('statsPanel')">Chiudi</button></div>
+          </div>
+          <div id="stKpi" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px"></div>
+          <h2 style="margin-top:18px;font-size:15px">Per scuola</h2>
+          <div id="stScuole"></div>
+          <h2 style="margin-top:18px;font-size:15px">Per classe</h2>
+          <div id="stClassi"></div>
+          <h2 style="margin-top:18px;font-size:15px">Per lezione</h2>
+          <div id="stLezioni"></div>
+          <h2 style="margin-top:18px;font-size:15px">Ultimi 30 giorni</h2>
+          <div id="stGiorni" style="display:flex;align-items:flex-end;gap:3px;height:80px;border-bottom:1px solid #eadfce;padding-bottom:2px"></div>
+          <div id="stVuoto" class="hint hidden">Nessun dato ancora: le statistiche compaiono quando le classi usano il player con il codice classe.</div>
+        </div>
+      </div>
+
+      <!-- PANNELLO SCUOLE (migr. 26): Cliente → Scuola → Classi -->
+      <div id="scuolePanel" class="hidden">
+        <div class="card">
+          <h2>🏫 Scuole e classi <span class="hint" style="font-weight:400">— Cliente → Scuola → Classi</span></h2>
+          <p class="hint">Le <b>scuole</b> sono gli istituti che usano i corsi di questo cliente. <b>Ospite</b> = invitata dal cliente (nessuna licenza propria); <b>pagante</b> = ha una sua licenza con date. Se la licenza della scuola scade, le sue classi vedono un avviso e le lezioni si fermano — il resto del cliente continua a funzionare.</p>
+          <div class="grid2" style="align-items:end">
+            <div><label>Cliente</label><select id="scCliente" onchange="renderScuole()"></select></div>
+            <div><button class="btn rosa" onclick="nuovaScuola()">＋ Nuova scuola</button> <button class="btn ghost" onclick="chiudiPannello('scuolePanel')">Chiudi</button></div>
+          </div>
+          <div id="scuoleList" style="margin-top:12px"></div>
+        </div>
+        <div class="card hidden" id="scuolaForm">
+          <h2 id="scTit">Scuola</h2>
+          <div class="grid2">
+            <div><label>Nome dell'istituto</label><input id="sNome"></div>
+            <div><label>Città</label><input id="sCitta"></div>
+            <div><label>Referente</label><input id="sRef"></div>
+            <div><label>Email referente</label><input id="sMail"></div>
+            <div><label>Tipo</label><select id="sTipo"><option value="ospite">ospite (invitata dal cliente)</option><option value="pagante">pagante (licenza propria)</option></select></div>
+            <div><label>Stato licenza</label><select id="sStato"><option value="attiva">attiva</option><option value="sospesa">sospesa</option><option value="scaduta">scaduta</option></select></div>
+            <div><label>Licenza dal</label><input id="sDa" type="date"></div>
+            <div><label>Licenza fino al (vuoto = come l'account del cliente)</label><input id="sA" type="date"></div>
+          </div>
+          <label>Note interne</label><textarea id="sNote" rows="2"></textarea>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <button class="btn rosa" onclick="salvaScuola()">Salva scuola</button>
+            <button class="btn ghost" onclick="nuovaClasse()">＋ Aggiungi una classe</button>
+            <button class="btn ghost" onclick="eliminaScuola()" style="margin-left:auto;color:#b8506a">Elimina scuola</button>
+          </div>
+          <h2 style="margin-top:18px;font-size:15px">Classi di questa scuola</h2>
+          <p class="hint">Ogni classe ha il suo link: la maestra lo apre sulla LIM e tutto viene registrato in modo anonimo sotto quel codice.</p>
+          <div id="classiList"></div>
+        </div>
+      </div>
+
+      <!-- PANNELLO CATALOGO (migr. 26): chi può usare quale corso -->
+      <div id="catPanel" class="hidden">
+        <div class="card">
+          <h2>🎞️ Catalogo <span class="hint" style="font-weight:400">— un corso, più clienti</span></h2>
+          <p class="hint">Il corso esiste <b>una volta sola</b> e si concede in licenza ai clienti che lo useranno: tu lo aggiorni in un posto, tutti vedono la versione aggiornata. Il proprietario è chi lo produce e lo modifica; gli altri lo usano in sola lettura. Serve una copia modificabile? <b>Duplica</b> il corso nel cliente: da quel momento è suo e non riceverà più i tuoi aggiornamenti.</p>
+          <div class="grid2" style="align-items:end">
+            <div><label>Corso</label><select id="catCorso" onchange="renderCatalogo()"></select></div>
+            <div><button class="btn ghost" onclick="chiudiPannello('catPanel')">Chiudi</button></div>
+          </div>
+          <div id="catInfo" class="hint" style="margin-top:8px"></div>
+          <h2 style="margin-top:16px;font-size:15px">Chi può usarlo</h2>
+          <div id="catList"></div>
+          <h2 style="margin-top:16px;font-size:15px">Concedi a un altro cliente</h2>
+          <div class="grid2" style="align-items:end">
+            <div><label>Cliente</label><select id="catDest"></select></div>
+            <div class="grid2">
+              <div><label>Dal</label><input id="catDa" type="date"></div>
+              <div><label>Fino al (vuoto = senza scadenza)</label><input id="catA" type="date"></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <button class="btn rosa" onclick="concediCorso()">🔑 Concedi in licenza</button>
+            <button class="btn ghost" onclick="duplicaCorso()">⧉ Duplica il corso in un cliente</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANNELLO CORSI (Fase 3) -->
+      <div id="corsiPanel" class="hidden">
+        <div class="card">
+          <h2>📚 Corsi <span class="hint" style="font-weight:400">— Cliente → Corso → Lezioni</span></h2>
+          <p class="hint">Un corso raccoglie le lezioni di un percorso (es. «La vita della goccia»). Il <b>prologo</b> è l'Intro del corso: compare a schermo intero all'avvio della prima lezione. Le lezioni si collegano al corso dal campo <b>Corso</b> nell'editor lezione. I corsi in <b>bozza</b> non escono mai verso le classi.</p>
+          <div class="grid2" style="align-items:end">
+            <div><label>Cliente</label><select id="cCliente" onchange="renderCorsi()"></select></div>
+            <div><button class="btn rosa" onclick="nuovoCorso()">＋ Nuovo corso</button> <button class="btn ghost" onclick="chiudiCorsi()">Chiudi</button></div>
+          </div>
+          <div id="corsiList" style="margin-top:12px"></div>
+        </div>
+        <div class="card hidden" id="corsoForm">
+          <h2 id="corsoTit">Corso</h2>
+          <div class="grid2">
+            <div><label>Titolo</label><input id="coTit"></div>
+            <div><label>Slug (nell'URL)</label><input id="coSlug"></div>
+            <div><label>Sottotitolo</label><input id="coSub"></div>
+            <div><label>Emoji</label><input id="coEm"></div>
+            <div><label>Colore card</label><select id="coCol"><option value="rosa">rosa</option><option value="oro">oro</option><option value="blu">blu</option><option value="verde">verde</option></select></div>
+            <div><label>Fascia</label><select id="coFascia"><option value="entrambe">Primaria e Medie</option><option value="primaria">Primaria</option><option value="medie">Medie</option></select></div>
+            <div><label>Stato</label><select id="coStato"><option value="bozza">bozza (invisibile alle classi)</option><option value="pubblicato">pubblicato</option><option value="soon">prossimamente</option></select></div>
+            <div><label>Ordine</label><input id="coOrd" type="number" value="0"></div>
+          </div>
+          <label>Descrizione (card del corso)</label><textarea id="coDesc" rows="2"></textarea>
+          <label>Intro del corso · prologo a schermo intero (righe preservate; vuoto = nessun prologo)</label>
+          <textarea id="coProl" rows="7" placeholder="Da qualche parte, tra il mare e la terra…"></textarea>
+          <div class="grid2">
+            <div><label>Condivisibile con altri clienti?</label><select id="coVis"><option value="privato">no, solo di questo cliente</option><option value="catalogo">sì, concedibile in licenza</option></select></div>
+            <div style="display:flex;align-items:flex-end"><button class="btn ghost" onclick="apriCatalogo(CORSO_SEL?CORSO_SEL.id:null)">🎞️ Chi può usarlo…</button></div>
+          </div>
+          <h2 style="margin-top:18px;font-size:15px">🎭 Mascotte del corso</h2>
+          <p class="hint">Ogni corso ha il suo personaggio: nome, immagine e i video dei momenti (benvenuto, fine lezione, fine corso, risposta giusta/sbagliata) per fascia. Vuoto = nessuna mascotte. Puoi <b>importare</b> tutto da un progetto già configurato (es. Coccio dalle saline).</p>
+          <div class="grid2">
+            <div><label>Nome della mascotte</label><input id="coMascNome" placeholder="es. Coccio di sale"></div>
+            <div><label>Immagine (PNG trasparente, URL https)</label><input id="coMascImg" placeholder="https://…/mascotte.png"></div>
+          </div>
+          <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin:6px 0 8px">
+            <label style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="coMascJun" checked> mostra alla Primaria</label>
+            <label style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="coMascSen" checked> mostra alle Medie</label>
+            <label style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="coMascQuiz" checked> video anche nel quiz</label>
+            <select id="coMascImporta" style="margin-left:auto"><option value="">Importa da progetto…</option></select>
+            <button class="btn mini" onclick="importaMascotteCorso()">⤓ Importa</button>
+          </div>
+          <div id="coMascGrid" class="mascGrid"></div>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <button class="btn rosa" onclick="salvaCorso()">Salva corso</button>
+            <button class="btn ghost" onclick="apriPlayerCliente()">▶ Apri il player del cliente</button>
+            <button class="btn ghost" onclick="eliminaCorso()" style="margin-left:auto;color:#b8506a">Elimina corso</button>
+          </div>
+          <div id="corsoLez" class="hint" style="margin-top:10px"></div>
+        </div>
+      </div>
+
+      <!-- PANNELLO CLIENTI & LICENZE (solo admin) -->
+      <div id="cliPanel" class="hidden">
+        <div class="card">
+          <h2>🏢 Clienti &amp; Licenze <span class="hint" style="font-weight:400">— Esplora Trapani Edu</span></h2>
+          <p class="hint">Ogni cliente ha il suo indirizzo <code>/project/edu/<b>slug</b>/</code>, il suo brand e la sua licenza. Licenza <b>sospesa</b> o <b>scaduta</b> (data di fine superata) = il player mostra un avviso gentile e non serve lezioni. Le date le decidi tu.</p>
+          <div style="display:flex;gap:8px"><button class="btn rosa" onclick="nuovoCliente()">＋ Nuovo cliente</button><button class="btn ghost" onclick="chiudiClienti()">Chiudi</button></div>
+          <div id="cliList" style="margin-top:12px"></div>
+          <h2 style="margin-top:18px;font-size:15px">📥 Richieste di attivazione <span class="hint" style="font-weight:400">(dalla pagina pubblica attiva.php)</span></h2>
+          <div id="richList" class="hint">…</div>
+        </div>
+        <div class="card hidden" id="cliForm">
+          <h2 id="cliTit">Cliente</h2>
+          <div class="grid2">
+            <div><label>Nome</label><input id="clNome"></div>
+            <div><label>Slug (nell'URL, minuscolo)</label><input id="clSlug"></div>
+            <div><label>Titolo del player (brand)</label><input id="clBTit"></div>
+            <div><label>Sottotitolo (brand)</label><input id="clBSub"></div>
+            <div><label>Piano</label><select id="clPiano"><option value="base">base</option><option value="pro">pro</option><option value="premium">premium</option></select></div>
+            <div><label>Stato licenza</label><select id="clStato"><option value="attiva">attiva</option><option value="sospesa">sospesa</option><option value="scaduta">scaduta</option></select></div>
+            <div><label>Licenza dal</label><input id="clIni" type="date"></div>
+            <div><label>Licenza fino al (vuoto = senza scadenza)</label><input id="clFine" type="date"></div>
+            <div><label>Referente</label><input id="clRefNome"></div>
+            <div><label>Email referente (mostrata se la licenza scade)</label><input id="clRefMail"></div>
+          </div>
+          <label>Note interne</label><textarea id="clNote" rows="2"></textarea>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <button class="btn rosa" onclick="salvaCliente()">Salva cliente</button>
+            <button class="btn ghost" onclick="copiaLinkCliente()">🔗 Copia link del player</button>
+          </div>
+
+          <!-- ABBONAMENTO STRIPE (Fase 2) -->
+          <h2 style="margin-top:18px">💳 Abbonamento</h2>
+          <p class="hint">Scegli piano e periodo e premi <b>Invia link di pagamento</b>: è <b>Stripe</b> a mandare l'email con la pagina di pagamento al referente del cliente (<span id="abEmail">—</span>). Quando paga, la licenza si attiva da sola fino a fine periodo; i rinnovi arrivano allo stesso modo. Pausa e annullamento agiscono davvero sull'abbonamento Stripe.</p>
+          <div id="abStato" style="padding:10px 12px;border-radius:12px;background:#f6efe8;margin:6px 0 10px;font-size:14px">Nessun abbonamento</div>
+          <div class="grid3" style="align-items:end">
+            <div><label>Piano</label><select id="abPiano"><option value="base">Base · 50 €</option><option value="pro">Pro · 100 €</option><option value="premium">Premium · 200 €</option></select></div>
+            <div><label>Periodo</label><select id="abPeriodo"><option value="anno">Annuale</option><option value="mese">Mensile</option></select></div>
+            <div><button class="btn rosa" id="abCrea" onclick="abbonamentoCrea()">✉️ Invia link di pagamento</button></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap" id="abAzioni">
+            <button class="btn ghost" id="abLink" onclick="abbonamentoLink()">🔗 Copia / reinvia il link</button>
+            <button class="btn ghost" id="abPausa" onclick="abbonamentoPausa()">⏸ Metti in pausa</button>
+            <button class="btn ghost" id="abRiprendi" onclick="abbonamentoRiprendi()">▶ Riprendi</button>
+            <button class="btn ghost" id="abAnnulla" onclick="abbonamentoAnnulla()" style="color:#b8506a">✕ Annulla…</button>
+            <button class="btn ghost" id="abSync" onclick="abbonamentoStato()" style="margin-left:auto">↻ Aggiorna da Stripe</button>
+          </div>
+          <div id="abStorico" class="hint" style="margin-top:8px"></div>
+
+          <h2 style="margin-top:18px">👥 Utenti di questo cliente</h2>
+          <p class="hint">Assegna gli account (creati in Supabase Auth) al cliente con il ruolo: <b>editor</b> gestisce corsi e lezioni del cliente, <b>docente</b> vede le statistiche. Gli <b>admin</b> vedono tutto.</p>
+          <div id="cliUtenti"></div>
+        </div>
+      </div>
+
+      <div id="lezEditor" class="hidden">
+
+        <!-- META -->
+        <div class="card">
+          <h2>Lezione</h2>
+          <div class="grid2">
+            <div><label>Titolo</label><input id="fTit"></div>
+            <div><label>Sottotitolo</label><input id="fSub"></div>
+          </div>
+          <div class="grid3">
+            <div><label>Emoji</label><input id="fEm" maxlength="4"></div>
+            <div><label>Colore card</label>
+              <select id="fCol"><option value="rosa">rosa</option><option value="oro">oro</option>
+              <option value="blu">blu</option><option value="verde">verde</option></select></div>
+            <div><label>Durata (etichetta)</label><input id="fDur" placeholder="~10 minuti"></div>
+          </div>
+          <div class="grid3">
+            <div><label>Slug</label><input id="fSlug"></div>
+            <div><label>Ordine</label><input id="fOrd" type="number"></div>
+            <div><label>Stato</label>
+              <select id="fStato"><option value="bozza">bozza</option>
+              <option value="pubblicata">pubblicata</option><option value="soon">prossimamente</option></select></div>
+            <div><label>Corso (Cliente → Corso)</label><select id="fCorso"></select></div>
+          </div>
+          <label>Intro del corso · prologo a schermo intero all'avvio (righe preservate; vuoto = nessun prologo)</label>
+          <textarea id="fPrologo" rows="7" placeholder="Da qualche parte, tra il mare e la terra…"></textarea>
+          <label>Intro di Coccio</label><textarea id="fIntro"></textarea>
+          <label>Video Coccio d'apertura (URL o ID YouTube, oppure bunny:GUID)</label>
+          <input id="fCoccio" placeholder="es. rpO1lHH8SIo — vuoto = nessun video d'apertura">
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+            <button class="btn oro" onclick="salvaMeta()">Salva lezione</button>
+            <button class="btn ghost" onclick="copiaAnteprima()">🔗 Copia link anteprima</button>
+            <button class="btn ghost" onclick="snapshot()">💾 Snapshot versione</button>
+            <button class="btn ghost" onclick="duplica()">⧉ Duplica</button>
+            <span style="flex:1"></span>
+            <button class="btn danger" onclick="eliminaLezione()">Elimina lezione</button>
+          </div>
+        </div>
+
+        <!-- ACCESSIBILITÀ -->
+        <div class="card">
+          <h2>♿ Accessibilità della lezione</h2>
+          <p class="hint">Il player ha tre modalità scelte in home dalla classe: <b>Standard</b>, <b>Ipovedenti</b> (testo 2× ad alto contrasto WCAG AAA + lettura vocale di intro, scoperte e quiz) e <b>LIS</b> (interprete in basso a destra sincronizzato clip per clip). Qui dichiari cosa è pronto per questa lezione: nel menu compaiono i badge e le lezioni non adatte vengono segnalate.</p>
+          <label class="chk"><input type="checkbox" id="fAccIpo"> Adatta al template <b>ipovedenti</b> (testi delle scoperte e quiz chiari anche letti ad alta voce)</label>
+          <label class="chk"><input type="checkbox" id="fAccLis"> Video <b>LIS</b> disponibile <span class="hint" id="fAccLisInfo"></span></label>
+          <label>Note per i docenti (es. "audio descrizioni registrate", "LIS solo clip 1")</label>
+          <input id="fAccNote" placeholder="facoltativo">
+          <p class="hint" style="margin-top:8px">Il video LIS si incolla <b>clip per clip</b> nella playlist qui sotto (campo 🤟): deve avere la stessa durata e lo stesso timing della clip 360.</p>
+        </div>
+
+        <!-- MEDIA -->
+        <div class="card">
+          <h2>Media della lezione (playlist)</h2>
+          <p class="hint">I video 360 vivono su Bunny (incolla il GUID); le foto 360 sono URL diretti (es. Backblaze B2). L'ordine qui è l'ordine di riproduzione. Il campo 🎵 è l'<b>audio di sottofondo</b> della clip (URL https diretto a un .mp3): parte e si ferma con il video, si abbassa da solo quando parla la mascotte o si apre una scoperta.</p>
+          <div id="mediaList"></div>
+          <div class="grid3" style="margin-top:10px">
+            <div><label>Tipo</label><select id="nmTipo"><option value="video360">video 360</option><option value="foto360">foto 360</option></select></div>
+            <div style="grid-column:span 2"><label>GUID Bunny <span style="opacity:.5">oppure</span> URL foto</label><input id="nmVal" placeholder="90cbd961-… oppure https://…jpg"></div>
+          </div>
+          <div class="grid3">
+            <div><label>Durata foto (sec)</label><input id="nmDur" type="number" placeholder="solo foto 360"></div>
+            <div style="grid-column:span 2"><label>Nota</label><input id="nmNote" placeholder="es. intervista parte 1"></div>
+          </div>
+          <button class="btn oro mini" style="margin-top:10px" onclick="aggiungiMedia()">＋ Aggiungi media</button>
+        </div>
+
+        <!-- EDITOR 360 -->
+        <div class="card">
+          <h2>Tappe e scoperte</h2>
+          <p class="hint">Il video è mostrato <b>piatto</b> (equirettangolare, "srotolato"): niente WebGL, si vede sempre. Scegli un media, scorri fino al punto giusto e premi <b>⏱ Nuova tappa qui</b>. Poi seleziona la tappa, attiva <b>➕ Piazzamento</b> e <b>clicca sul fotogramma</b>: l'hotspot nasce dove clicchi (yaw e pitch calcolati dalla posizione). I marker si <b>trascinano</b> per correggere. Se nel player i punti risultano ruotati o specchiati, usa i bottoni ↔ / ⇋ in alto a destra (preferenza salvata).</p>
+          <div class="chips" id="mediaChips"></div>
+
+          <div id="viewerBox" style="margin-top:10px">
+            <div id="placingBanner">🎯 Clicca sul fotogramma per piazzare la scoperta</div>
+            <video id="edVid" playsinline webkit-playsinline preload="auto"></video>
+            <img id="edImg" alt="" style="display:none">
+            <div id="edGrid"></div>
+            <div id="edOverlay" class="noplace"></div>
+            <div id="edTools">
+              <button id="btnGrid" class="on" onclick="toggleGrid()" title="griglia yaw/pitch">griglia</button>
+              <button id="btnMute" onclick="toggleMute()" title="audio del video">🔊</button>
+              <button id="btnFlip" onclick="toggleFlip()" title="se i punti nel player risultano ruotati di 180° rispetto all'editor">↔ ruota 180°</button>
+              <button id="btnMirror" onclick="toggleMirror()" title="se i punti nel player risultano specchiati (destra/sinistra invertite)">⇋ specchia</button>
+            </div>
+            <div id="edHud">il 360 "srotolato": centro = davanti (yaw 0) · sinistra = yaw −180 · destra = yaw +180 · alto = pitch +90</div>
+          </div>
+          <div id="tlDotsWrap"></div>
+          <div id="tl">
+            <button class="btn mini" id="tlPlay" onclick="tlToggle()">▶</button>
+            <button class="btn mini" onclick="salta(-2)" title="indietro di 2 secondi">−2s</button>
+            <button class="btn mini" onclick="salta(2)" title="avanti di 2 secondi">+2s</button>
+            <input id="tlRange" type="range" aria-label="Posizione nel video" min="0" max="1000" value="0">
+            <span id="tlTime">00:00 / --:--</span>
+            <button class="btn rosa mini" onclick="nuovaTappaQui()">⏱ Nuova tappa qui</button>
+          </div>
+          <div class="hint" style="margin-top:6px">stato video: <span id="vidStato" style="font-family:monospace">—</span></div>
+
+          <div class="chips" id="tappeChips"></div>
+
+          <!-- form tappa -->
+          <div id="tappaForm" class="hidden" style="border-top:1px dashed var(--linea);margin-top:14px;padding-top:6px">
+            <div class="grid3">
+              <div><label>Secondo di stop (t)</label><input id="tT" type="number" step="0.1"></div>
+              <div><label>Ordine</label><input id="tOrd" type="number"></div>
+              <div style="display:flex;align-items:flex-end;gap:8px">
+                <button class="btn oro mini" onclick="salvaTappa()">Salva tappa</button>
+                <button class="btn danger mini" onclick="eliminaTappa()">Elimina</button>
+              </div>
+            </div>
+            <div class="grid2">
+              <div><label>Coccio dice (8–10)</label><textarea id="tCocciu"></textarea></div>
+              <div><label>Coccio dice (11–13, opzionale)</label><textarea id="tCocciu2"></textarea></div>
+            </div>
+
+            <label style="margin-top:16px">Scoperte di questa tappa</label>
+            <div id="hotList"></div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn rosa mini" id="btnPlace" onclick="togglePlacing()">➕ Piazzamento con click</button>
+              <button class="btn ghost mini" onclick="hotAlCentro()">🎯 Nuova al centro (yaw 0 · pitch 0)</button>
+            </div>
+
+            <!-- form hotspot -->
+            <div id="hotForm" class="hidden" style="background:var(--sale);border-radius:14px;padding:14px;margin-top:12px">
+              <div class="grid3">
+                <div><label>Emoji</label><input id="hEm" maxlength="4"></div>
+                <div><label>Yaw</label><input id="hYaw" type="number" step="1"></div>
+                <div><label>Pitch</label><input id="hPitch" type="number" step="1"></div>
+              </div>
+              <label>Titolo</label><input id="hTit">
+              <div class="grid2">
+                <div><label>Testo 8–10</label><textarea id="hTxt"></textarea></div>
+                <div><label>Testo 11–13 (opzionale)</label><textarea id="hTxt2"></textarea></div>
+              </div>
+              <div class="grid2">
+                <div><label>Foto nella scheda (URL)</label><input id="hFoto" placeholder="https://…jpg"></div>
+                <div><label>Audio nella scheda (URL)</label><input id="hAudio" placeholder="https://…mp3"></div>
+              </div>
+              <div class="grid3">
+                <div><label>Validazione</label>
+                  <select id="hVal"><option value="da_validare">da validare</option><option value="validato">validato</option></select></div>
+                <div style="grid-column:span 2"><label>Validatore</label><input id="hValNome" placeholder="es. WWF Riserva Saline TP"></div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:12px">
+                <button class="btn oro mini" onclick="salvaHot()">Salva scoperta</button>
+                <button class="btn danger mini" onclick="eliminaHot()">Elimina</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- QUIZ -->
+        <div class="card">
+          <h2>Quiz</h2>
+          <div class="chips">
+            <button class="chip on" id="qzJ" onclick="setQzLiv('junior')">Primaria · 8–10</button>
+            <button class="chip" id="qzS" onclick="setQzLiv('senior')">Medie · 11–13</button>
+          </div>
+          <p class="hint">Le domande con <b>«Lo sapevi?»</b> mostrano la spiegazione (e la foto) dopo la risposta, nel player e nel Quiz Live. Il <b>video di riferimento</b> fa entrare la domanda nel Quiz Live anche a metà lezione: senza, la domanda è generale e compare solo nel quiz finale.</p>
+          <div id="quizList"></div>
+          <button class="btn oro mini" style="margin-top:12px" onclick="nuovaDomanda()">＋ Nuova domanda</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================ CONFIG ============================ */
+const SUPA_URL = <?php echo json_encode($SUPA_URL, JSON_UNESCAPED_SLASHES); ?>;
+const SUPA_ANON = <?php echo json_encode($SUPA_ANON); ?>;   // da dati/config.php, o fallback incorporato
+const CDN = 'https://vz-bedaaab5-085.b-cdn.net/';
+/* player per progetto: il link anteprima apre l'istanza giusta */
+const PLAYER_URLS = {
+  'sale-in-classe':           'https://www.alessandromilia.it/project/edu/saline/demo/index.php',
+  'antichi-mestieri-trapani': 'https://www.alessandromilia.it/project/edu/mestieri/index.php'
+};
+const PLAYER_URL = PLAYER_URLS['sale-in-classe'];
+/* ================================================================ */
+
+let sb=null, USER=null, RUOLO='', LEZ=null, MEDIA=[], TAPPE=[], HOTS=[], QUIZ=[];
+let CLIENTI=[], CORSI=[], MIO_CLIENTE=null, CORSO_SEL=null, CLI_SEL=null;   /* Fase 3 tenant */
+let DIR_CLIENTI=[];   /* elenco minimo id/slug/nome di TUTTI i clienti (rpc edu_elenco_clienti): all'editor la RLS mostra solo il suo cliente in CLIENTI, ma per concedere/duplicare un corso deve poter scegliere la destinazione */
+function nomeCliente(id){ const c=DIR_CLIENTI.find(x=>x.id===id)||CLIENTI.find(x=>x.id===id); return c?c.nome:null; }
+async function caricaDirClienti(){
+  let dir=null; try{ const r=await sb.rpc('edu_elenco_clienti'); if(r&&!r.error&&Array.isArray(r.data))dir=r.data; }catch(e){}
+  DIR_CLIENTI=(dir&&dir.length)?dir:CLIENTI.map(c=>({id:c.id,slug:c.slug,nome:c.nome}));   /* ripiego: quello che la RLS lascia vedere */
+  return DIR_CLIENTI;
+}
+const APP_BASE='https://www.alessandromilia.it/project/edu/';
+let selMedia=null, selTappa=null, selHot=null, placing=false, qzLiv='junior', _hls=null;
+
+const $=(id)=>document.getElementById(id);
+function num(v){ return parseFloat(String(v==null?'':v).replace(',','.'))||0; }
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('on'); setTimeout(()=>t.classList.remove('on'),2200); }
+function esc(s){ const d=document.createElement('div'); d.textContent=s==null?'':s;
+  /* textContent→innerHTML NON protegge apici e virgolette: senza questi due
+     passaggi un nome come  5ª A');alert(1);('  eseguirebbe codice quando
+     finisce dentro un attributo onclick="..." (XSS da editor dello stesso
+     cliente). Vale per scuole, classi, corsi, clienti. */
+  return d.innerHTML.replace(/'/g,'&#39;').replace(/"/g,'&quot;'); }
+
+/* ---------------------------- AUTH ---------------------------- */
+async function boot(){
+  if(!SUPA_ANON){ $('gateConfig').classList.remove('hidden'); return; }
+  sb=supabase.createClient(SUPA_URL,SUPA_ANON);
+  /* link di recupero: Supabase mette la sessione nell'URL (#…type=recovery) e
+     alza l'evento PASSWORD_RECOVERY → mostro il form della nuova password */
+  let recupero_in_corso = /type=recovery/.test(location.hash||'');
+  if(/error_code=otp_expired|error=access_denied/.test(location.hash||'')){        /* link già usato o scaduto */
+    setTimeout(()=>{ const e=$('loginErr'); if(e)e.textContent='Il link di recupero è scaduto o è già stato usato (a volte Gmail lo apre prima di te). Richiedine uno nuovo con «Password dimenticata?» e aprilo una volta sola.'; },300);
+    try{ history.replaceState(null,'',location.pathname); }catch(e){}
+  }
+  sb.auth.onAuthStateChange((evento)=>{ if(evento==='PASSWORD_RECOVERY'){ recupero_in_corso=true; mostraNuovaPassword(); } });
+  const {data:{session}}=await sb.auth.getSession();
+  if(recupero_in_corso){ USER=session?session.user:null; mostraNuovaPassword(); return; }
+  if(session){ USER=session.user; await entra(); } else { $('gateLogin').classList.remove('hidden'); }
+}
+function mostraNuovaPassword(){ ['gateLogin','gateNoRole','gateConfig'].forEach(i=>{ const e=$(i); if(e)e.classList.add('hidden'); }); $('gateNuovaPass').classList.remove('hidden'); }
+async function recupero(){
+  $('loginErr').textContent=''; $('recOk').classList.add('hidden');
+  let email=$('loginEmail').value.trim();
+  if(!email){ email=(prompt('Scrivi l\'e-mail del tuo account della regia:')||'').trim(); if(!email)return; $('loginEmail').value=email; }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ $('loginErr').textContent='Scrivi un indirizzo e-mail valido.'; return; }
+  const redirect=location.origin+location.pathname;      /* torna su QUESTA regia */
+  const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:redirect});
+  if(error){ $('loginErr').textContent='Non riesco a inviare l\'e-mail: '+error.message; return; }
+  $('recOk').textContent='✓ E-mail inviata a '+email+': apri il link «Reset password» e scegli la nuova password. Controlla anche lo spam.';
+  $('recOk').classList.remove('hidden');
+}
+async function nuovaPassword(){
+  const p1=$('npPass').value, p2=$('npPass2').value; $('npErr').textContent='';
+  if(p1.length<8){ $('npErr').textContent='La password deve avere almeno 8 caratteri.'; return; }
+  if(p1!==p2){ $('npErr').textContent='Le due password non coincidono.'; return; }
+  const {data,error}=await sb.auth.updateUser({password:p1});
+  if(error){ $('npErr').textContent='Non riesco a salvare: '+error.message+' — riapri il link dell\'e-mail (scade dopo un po\').'; return; }
+  try{ history.replaceState(null,'',location.pathname); }catch(e){}
+  $('gateNuovaPass').classList.add('hidden'); USER=data.user; toast('Password aggiornata'); await entra();
+}
+async function login(){
+  $('loginErr').textContent='';
+  const {data,error}=await sb.auth.signInWithPassword({email:$('loginEmail').value.trim(),password:$('loginPass').value});
+  if(error){ $('loginErr').textContent='Accesso non riuscito: controlla e-mail e password.'; return; }
+  USER=data.user; $('gateLogin').classList.add('hidden'); await entra();
+}
+async function logout(){ if(sb)await sb.auth.signOut(); location.reload(); }
+async function entra(){
+  const {data}=await sb.from('edu_utenti').select('ruolo,nome,cliente_id').eq('id',USER.id).maybeSingle();
+  if(!data){ $('gateNoRole').classList.remove('hidden'); return; }
+  RUOLO=data.ruolo; MIO_CLIENTE=data.cliente_id||null;
+  if(RUOLO==='admin') $('btnClienti').classList.remove('hidden');
+  await caricaTenant();
+  $('whoami').textContent=(data.nome||USER.email)+' · '+RUOLO;
+  $('app').classList.remove('hidden');
+  await caricaLezioni();
+}
+
+/* ------------------------ LISTA LEZIONI ------------------------ */
+async function caricaLezioni(){
+  const {data,error}=await sb.from('edu_lezioni').select('*').order('ordine');
+  if(error){ toast('Errore caricamento lezioni'); return; }
+  const uff=data.filter(l=>!l.owner), mie=data.filter(l=>l.owner===USER.id);
+  let html='';
+  if(CORSI.length){
+    CLIENTI.forEach(cl=>{
+      const corsiCl=CORSI.filter(co=>co.proprietario_id===cl.id);
+      if(!corsiCl.length)return;
+      html+='<div class="sez" style="margin-top:8px">🏢 '+esc(cl.nome)+'</div>';
+      corsiCl.forEach(co=>{
+        const lz=uff.filter(l=>l.corso_id===co.id);
+        html+='<div class="hint" style="margin:6px 0 2px;font-weight:700">'+esc(co.emoji||'📚')+' '+esc(co.titolo)+(co.stato!=='pubblicato'?' <span class="badge bozza">'+esc(co.stato)+'</span>':'')+'</div>'+(lz.map(itemLez).join('')||'<p class="hint" style="margin:0 0 4px 8px">nessuna lezione</p>');
+      });
+    });
+  }
+  const orfane=uff.filter(l=>!l.corso_id||!CORSI.some(co=>co.id===l.corso_id));
+  if(orfane.length){
+    const progs=[...new Set(orfane.map(l=>l.progetto))];
+    html+=progs.map(p=>'<div class="sez" style="margin-top:8px">'+esc(p||'senza corso')+' <span class="hint">(senza corso)</span></div>'+orfane.filter(l=>l.progetto===p).map(itemLez).join('')).join('');
+  }
+  $('listUff').innerHTML=html||'<p class="hint">Nessuna lezione.</p>';
+  $('listMie').innerHTML=mie.map(itemLez).join('')||'<p class="hint">Nessuna copia personale.</p>';
+  window._lezById={}; data.forEach(l=>window._lezById[l.id]=l);
+}
+/* filtro della sidebar: nasconde le voci che non contengono il testo cercato.
+   Con dieci clienti e quaranta lezioni la colonna diventa altrimenti infinita. */
+function filtraSidebar(q){
+  q=(q||'').trim().toLowerCase();
+  document.querySelectorAll('#listUff .lezItem, #listMie .lezItem').forEach(b=>{
+    b.style.display=(!q||b.textContent.toLowerCase().includes(q))?'':'none';
+  });
+  document.querySelectorAll('#listUff .sez, #listUff .hint').forEach(s=>{
+    if(!q){ s.style.display=''; return; }
+    let vis=false, n=s.nextElementSibling;
+    while(n && !n.classList.contains('sez')){ if(n.classList.contains('lezItem') && n.style.display!=='none'){vis=true;break;} n=n.nextElementSibling; }
+    s.style.display=vis?'':'none';
+  });
+}
+function itemLez(l){
+  const b=l.stato==='pubblicata'?'<span class="badge pub">PUBBLICA</span>':
+          l.stato==='soon'?'<span class="badge soon">SOON</span>':'<span class="badge bozza">BOZZA</span>';
+  return `<button class="lezItem${LEZ&&LEZ.id===l.id?' on':''}" onclick="apriLezione('${l.id}')">
+    <span class="em">${esc(l.emoji)}</span>
+    <span><div class="t">${esc(l.titolo)}</div><div class="s">${esc(l.slug)}</div></span>${b}</button>`;
+}
+async function nuovaLezione(){
+  const tit=prompt('Titolo della nuova lezione:'); if(!tit)return;
+  const ufficiale=(RUOLO==='admin'||RUOLO==='editor')?confirm('Crearla come lezione UFFICIALE?\nOK = ufficiale · Annulla = personale'):false;
+  const slug=tit.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,30)||'lezione';
+  const row={titolo:tit,slug:slug+(ufficiale?'':'-'+Math.random().toString(36).slice(2,6)),owner:ufficiale?null:USER.id};
+  const co=scegliCorsoPrompt(); if(co===false)return;          /* Fase 3: la lezione nasce dentro un corso */
+  if(!co && RUOLO!=='admin' && ufficiale){ toast('Prima crea un corso (📚 Corsi): le lezioni ufficiali vivono dentro un corso'); return; }
+  if(co){ row.corso_id=co.id; row.progetto=progettoDelCorso(co.id)||undefined; }
+  const {data,error}=await sb.from('edu_lezioni').insert(row).select().single();
+  if(error){ toast('Errore: '+error.message); return; }
+  await caricaLezioni(); apriLezione(data.id);
+}
+
+/* ------------------------- EDITOR LEZIONE ------------------------- */
+async function apriLezione(id){
+  const [{data:l},{data:m},{data:t},{data:q}]=await Promise.all([
+    sb.from('edu_lezioni').select('*').eq('id',id).single(),
+    sb.from('edu_media').select('*').eq('lezione_id',id).order('ordine'),
+    sb.from('edu_tappe').select('*').eq('lezione_id',id).order('ordine'),
+    sb.from('edu_quiz').select('*').eq('lezione_id',id).order('ordine')
+  ]);
+  LEZ=l; MEDIA=m||[]; TAPPE=t||[]; QUIZ=q||[];
+  HOTS=[];
+  if(TAPPE.length){
+    const {data:h}=await sb.from('edu_hotspot').select('*').in('tappa_id',TAPPE.map(x=>x.id)).order('ordine');
+    HOTS=h||[];
+  }
+  selMedia=MEDIA[0]||null; selTappa=null; selHot=null; setPlacing(false);
+  $('benv').classList.add('hidden'); $('corsiPanel').classList.add('hidden'); $('cliPanel').classList.add('hidden'); $('statsPanel').classList.add('hidden'); $('lezEditor').classList.remove('hidden');
+  $('fTit').value=l.titolo; $('fSub').value=l.sottotitolo||''; $('fEm').value=l.emoji||'';
+  $('fCol').value=l.colore; $('fDur').value=l.durata_label||''; $('fSlug').value=l.slug;
+  $('fOrd').value=l.ordine; $('fStato').value=l.stato; $('fIntro').value=l.intro||''; $('fPrologo').value=l.prologo||'';
+  riempiSelectCorsi($('fCorso'), l.corso_id||'');
+  $('fCoccio').value=l.video_coccio||'';
+  const acc=l.accessibilita||{};
+  $('fAccIpo').checked=acc.ipovedenti!==false; $('fAccLis').checked=!!acc.lis; $('fAccNote').value=acc.note||'';
+  $('mascPanel').classList.add('hidden');
+  renderMedia(); renderTappe(); renderQuiz(); caricaMediaNelViewer(); aggiornaLisInfo();
+  caricaLezioni();
+}
+async function salvaMeta(){
+  const upd={titolo:$('fTit').value,sottotitolo:$('fSub').value,emoji:$('fEm').value,
+    colore:$('fCol').value,durata_label:$('fDur').value,slug:$('fSlug').value,
+    ordine:parseInt($('fOrd').value||0,10),stato:$('fStato').value,intro:$('fIntro').value,prologo:($('fPrologo').value.trim()||null),
+    video_coccio:$('fCoccio').value.trim()||null,
+    corso_id:($('fCorso').value||null), progetto:progettoDelCorso($('fCorso').value)||LEZ.progetto,
+    accessibilita:{ipovedenti:$('fAccIpo').checked,lis:$('fAccLis').checked,note:$('fAccNote').value.trim()},
+    aggiornato_il:new Date().toISOString()};
+  const {error}=await sb.from('edu_lezioni').update(upd).eq('id',LEZ.id);
+  if(error){ toast('Errore: '+error.message); return; }
+  Object.assign(LEZ,upd); toast('Lezione salvata'); caricaLezioni();
+}
+async function eliminaLezione(){
+  if(!confirm('Eliminare DEFINITIVAMENTE questa lezione con tutte le tappe, scoperte e quiz?'))return;
+  const {error}=await sb.from('edu_lezioni').delete().eq('id',LEZ.id);
+  if(error){ toast('Errore: '+error.message); return; }
+  LEZ=null; $('lezEditor').classList.add('hidden'); $('benv').classList.remove('hidden');
+  caricaLezioni(); toast('Lezione eliminata');
+}
+async function duplica(){
+  const {data,error}=await sb.rpc('edu_duplica_lezione',{p_id:LEZ.id});
+  if(error){ toast('Errore: '+error.message); return; }
+  await caricaLezioni(); apriLezione(data); toast('Copia creata (bozza)');
+}
+async function snapshot(){
+  const {data,error}=await sb.rpc('edu_assembla_lezione',{p_id:LEZ.id});
+  if(error){ toast('Errore: '+error.message); return; }
+  const {error:e2}=await sb.from('edu_versioni').insert({lezione_id:LEZ.id,dati:data,creato_da:USER.id});
+  if(e2){ toast('Errore: '+e2.message); return; }
+  toast('Snapshot salvato');
+}
+function copiaAnteprima(){
+  const url=(PLAYER_URLS[LEZ.progetto]||PLAYER_URL)+'?lez='+LEZ.token;
+  navigator.clipboard.writeText(url).then(()=>toast('Link anteprima copiato')).catch(()=>prompt('Copia il link:',url));
+}
+
+/* ---------------------------- MEDIA ---------------------------- */
+function renderMedia(){
+  $('mediaList').innerHTML=MEDIA.map((m,i)=>`
+    <div class="mediaRow${selMedia&&selMedia.id===m.id?' on':''}">
+      <span class="tag">${m.tipo==='foto360'?'FOTO':'VIDEO'} ${i+1}</span>
+      <span class="g">${esc(m.guid||m.url||'')}</span>
+      <span class="hint">${esc(m.note||'')}</span>
+      <span class="mascCell" title="Video con interprete LIS per questa clip (GUID Bunny o URL mp4)">🤟
+        <input class="lisIn" id="lis_${m.id}" value="${esc(m.video_lis||'')}" placeholder="GUID LIS" onchange="salvaLis('${m.id}')"></span>
+      <span class="mascCell" title="Audio di sottofondo di questa clip: URL https diretto al file .mp3/.m4a. Parte e si ferma con il video.">🎵
+        <input class="lisIn" id="aud_${m.id}" value="${esc(m.audio_url||'')}" placeholder="URL audio .mp3" onchange="salvaAudio('${m.id}')">
+        <input class="lisIn" style="width:58px" id="avol_${m.id}" type="number" min="0" max="100" value="${m.audio_vol==null?45:m.audio_vol}" title="Volume del sottofondo (0-100)" onchange="salvaAudio('${m.id}')">
+        <button class="btn mini" id="aprv_${m.id}" onclick="provaAudio('${m.id}')" title="Ascolta">▶</button></span>
+      <button class="btn mini" onclick="spostaMedia('${m.id}',-1)">↑</button>
+      <button class="btn mini" onclick="spostaMedia('${m.id}',1)">↓</button>
+      <button class="btn danger mini" onclick="eliminaMedia('${m.id}')">✕</button>
+    </div>`).join('')||'<p class="hint">Nessun media: aggiungi il primo video o foto 360.</p>';
+  $('mediaChips').innerHTML=MEDIA.map((m,i)=>`
+    <button class="chip${selMedia&&selMedia.id===m.id?' on':''}" onclick="selezionaMedia('${m.id}')">
+      ${m.tipo==='foto360'?'🖼':'🎬'} clip ${i+1}</button>`).join('');
+}
+/* ---- AUDIO DI SOTTOFONDO DELLA CLIP (migr. 25) ---- */
+let _provaAudio=null;
+async function salvaAudio(id){
+  let u=($('aud_'+id).value||'').trim();
+  const vol=Math.max(0,Math.min(100,parseInt($('avol_'+id).value||'45',10)||45));
+  if(u && /youtu\.?be|vimeo\./i.test(u)){ toast('Per il sottofondo serve il file audio (.mp3/.m4a), non un link a YouTube'); return; }
+  if(u && !/^https:\/\//i.test(u)){ toast('L\'URL dell\'audio deve iniziare con https://'); return; }
+  if(u && !/\.(mp3|m4a|aac|ogg|wav)(\?.*)?$/i.test(u)){ toast('L\'URL deve puntare direttamente al file audio (.mp3, .m4a, .ogg…)'); return; }
+  const {error}=await sb.from('edu_media').update({audio_url:u||null, audio_vol:vol}).eq('id',id);
+  if(error){ toast('Errore: '+error.message); return; }
+  const m=MEDIA.find(x=>x.id===id); if(m){ m.audio_url=u||null; m.audio_vol=vol; }
+  toast(u?'Audio di sottofondo salvato (volume '+vol+')':'Audio rimosso');
+}
+function provaAudio(id){
+  const u=($('aud_'+id).value||'').trim();
+  if(!u){ toast('Incolla prima l\'URL del file audio'); return; }
+  if(_provaAudio){ try{_provaAudio.pause();}catch(e){} if(_provaAudio.dataset.id===id){ _provaAudio=null; $('aprv_'+id).textContent='▶'; return; } }
+  document.querySelectorAll('[id^=aprv_]').forEach(b=>b.textContent='▶');
+  const a=new Audio(u); a.dataset.id=id;
+  a.volume=Math.max(0,Math.min(1,(parseInt($('avol_'+id).value||'45',10)||45)/100));
+  a.onerror=()=>{ toast('Non riesco a leggere questo audio: controlla che l\'URL sia pubblico e diretto al file'); $('aprv_'+id).textContent='▶'; };
+  a.onended=()=>{ $('aprv_'+id).textContent='▶'; };
+  a.play().then(()=>{ $('aprv_'+id).textContent='⏸'; }).catch(()=>toast('Riproduzione non riuscita'));
+  _provaAudio=a;
+}
+async function salvaLis(id){
+  let v=($('lis_'+id).value||'').trim().replace(/^bunny:/i,'');
+  /* Il LIS gira in un <video> sincronizzato clip per clip: servono un GUID
+     Bunny o un file https diretto. YouTube/Vimeo non sono riproducibili lì. */
+  if(v && /youtu\.?be|vimeo\./i.test(v)){
+    toast('YouTube/Vimeo non funzionano per il LIS: carica la clip su Bunny (stessa libreria dei 360) e incolla il GUID, oppure un link https diretto al file .mp4');
+    return;
+  }
+  /* link del pannello o dell'embed Bunny → estraggo il GUID da solo */
+  const mLink = v.match(/[?&]vid=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i)
+             || v.match(/mediadelivery\.net\/(?:embed|play)\/\d+\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i)
+             || v.match(/b-cdn\.net\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\//i);
+  if(mLink){ v=mLink[1]; $('lis_'+id).value=v; toast('Ho estratto il GUID dal link Bunny: '+v.slice(0,8)+'…'); }
+  const eGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+  const eFile = /^https:\/\/.+\.(mp4|m3u8)(\?.*)?$/i.test(v);
+  if(v && !eGuid && !eFile){
+    toast(/^https?:/i.test(v)
+      ? 'Questo è un link a una PAGINA, non al video: incolla il GUID della clip Bunny (o un .mp4/.m3u8 https diretto)'
+      : 'Valore non riconosciuto: incolla il GUID Bunny della clip LIS');
+    return;
+  }
+  const {error}=await sb.from('edu_media').update({video_lis:v||null}).eq('id',id);
+  if(error){ toast('Errore: '+error.message); return; }
+  const m=MEDIA.find(x=>x.id===id); if(m)m.video_lis=v||null;
+  aggiornaLisInfo(); toast(v?'Video LIS salvato':'Video LIS rimosso');
+}
+function aggiornaLisInfo(){
+  const n=MEDIA.length, k=MEDIA.filter(m=>m.video_lis).length;
+  $('fAccLisInfo').textContent=n?('('+k+' clip su '+n+' con LIS)'):'';
+  if(k>0&&!$('fAccLis').checked){ $('fAccLis').checked=true; }
+}
+
+/* ---------------------------- MASCOTTE ---------------------------- */
+const MASC_CHIAVI=[['inizio_corso','Benvenuto','al primo avvio del corso'],['fine_lezione','Fine lezione','dopo il quiz'],
+  ['fine_corso','Fine corso','tutte le lezioni completate'],['giusta','Risposta giusta',''],['sbagliata','Risposta sbagliata','']];
+let MPROG=[], MROWS=[];
+/* ======================= FASE 3 · TENANT: corsi, clienti, licenze ======================= */
+async function caricaTenant(){
+  const r1=await sb.from('edu_clienti').select('*').order('nome');
+  CLIENTI=(r1.data||[]);
+  const r2=await sb.from('edu_corsi').select('*').order('ordine');
+  CORSI=(r2.data||[]);
+}
+function clienteDi(corsoId){ const co=CORSI.find(c=>c.id===corsoId); return co?CLIENTI.find(cl=>cl.id===co.proprietario_id):null; }
+function progettoDelCorso(corsoId){ const cl=clienteDi(corsoId); return cl?(cl.progetto_legacy||null):null; }
+function riempiSelectCorsi(sel, val){
+  let h='<option value="">— nessun corso (legacy) —</option>';
+  CLIENTI.forEach(cl=>{ const cc=CORSI.filter(co=>co.proprietario_id===cl.id); if(!cc.length)return;
+    h+='<optgroup label="'+esc(cl.nome)+'">'+cc.map(co=>'<option value="'+co.id+'">'+esc(co.emoji||'📚')+' '+esc(co.titolo)+(co.stato!=='pubblicato'?' ('+esc(co.stato)+')':'')+'</option>').join('')+'</optgroup>'; });
+  sel.innerHTML=h; sel.value=val||'';
+}
+function scegliCorsoPrompt(){
+  const vis=CORSI.filter(co=>RUOLO==='admin'||co.proprietario_id===MIO_CLIENTE);
+  if(!vis.length) return null;
+  if(vis.length===1) return vis[0];
+  const lista=vis.map((co,i)=>(i+1)+') '+(clienteDi(co.id)||{}).nome+' · '+co.titolo).join('\n');
+  const r=prompt('In quale corso va la lezione?\n'+lista+'\n\nScrivi il numero (vuoto = nessun corso):','1');
+  if(r===null) return false;
+  const n=parseInt(r,10); return (n>=1&&n<=vis.length)?vis[n-1]:null;
+}
+
+/* ---- CORSI ---- */
+function clientiVisibili(){ return CLIENTI.filter(cl=>RUOLO==='admin'||cl.id===MIO_CLIENTE); }
+async function apriCorsi(){
+  if(!(RUOLO==='admin'||RUOLO==='editor')){ toast('Solo admin ed editor'); return; }
+  await caricaTenant();
+  const sel=$('cCliente'); const vis=clientiVisibili();
+  sel.innerHTML=vis.map(cl=>'<option value="'+cl.id+'">'+esc(cl.nome)+'</option>').join('');
+  if(!vis.length){ toast('Nessun cliente: crealo prima in Clienti & Licenze'); return; }
+  nascondiTutto();
+  $('corsiPanel').classList.remove('hidden'); $('corsoForm').classList.add('hidden'); CORSO_SEL=null;
+  renderCorsi();
+}
+function chiudiCorsi(){ $('corsiPanel').classList.add('hidden'); if(LEZ)$('lezEditor').classList.remove('hidden'); else $('benv').classList.remove('hidden'); caricaLezioni(); }
+function renderCorsi(){
+  const cid=$('cCliente').value;
+  const cc=CORSI.filter(co=>co.proprietario_id===cid);
+  $('corsiList').innerHTML=cc.map(co=>'<button class="lezItem'+(CORSO_SEL&&CORSO_SEL.id===co.id?' on':'')+'" onclick="apriCorso(\''+co.id+'\')"><span class="em">'+esc(co.emoji||'📚')+'</span><span><b>'+esc(co.titolo)+'</b><br><small>'+esc(co.slug)+' · '+esc(co.fascia)+'</small></span><span class="badge '+(co.stato==='pubblicato'?'pub':co.stato==='soon'?'soon':'bozza')+'">'+esc(co.stato).toUpperCase()+'</span></button>').join('')||'<p class="hint">Nessun corso per questo cliente.</p>';
+}
+function apriCorso(id){
+  CORSO_SEL=CORSI.find(c=>c.id===id); if(!CORSO_SEL)return;
+  const co=CORSO_SEL;
+  $('corsoTit').textContent=(co.emoji||'📚')+' '+co.titolo;
+  $('coTit').value=co.titolo||''; $('coSlug').value=co.slug||''; $('coSub').value=co.sottotitolo||''; $('coEm').value=co.emoji||'';
+  $('coCol').value=co.colore||'rosa'; $('coFascia').value=co.fascia||'entrambe'; $('coStato').value=co.stato||'bozza';
+  $('coOrd').value=co.ordine||0; $('coDesc').value=co.descrizione||''; $('coProl').value=co.prologo||'';
+  const mc=co.mascotte||{}; $('coMascNome').value=mc.nome||''; $('coMascImg').value=mc.img||''; $('coVis').value=co.visibilita||'privato';
+  $('coMascJun').checked=mc.junior!==false; $('coMascSen').checked=mc.senior!==false; $('coMascQuiz').checked=mc.quiz_sempre!==false;
+  renderMascotteCorso(mc.video||{}); riempiImportaMascotte();
+  $('corsoForm').classList.remove('hidden'); renderCorsi();
+  sb.from('edu_lezioni').select('titolo,stato').eq('corso_id',co.id).order('ordine').then(r=>{
+    const lz=r.data||[]; $('corsoLez').innerHTML='Lezioni nel corso: '+(lz.length?lz.map(l=>esc(l.titolo)+' <i>('+esc(l.stato)+')</i>').join(' · '):'<i>nessuna — assegnale dal campo Corso nell\'editor lezione</i>');
+  });
+}
+async function nuovoCorso(){
+  const cid=$('cCliente').value; if(!cid){ toast('Scegli il cliente'); return; }
+  const tit=prompt('Titolo del nuovo corso:'); if(!tit)return;
+  const slug=tit.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'corso';
+  const {data,error}=await sb.from('edu_corsi').insert({proprietario_id:cid,titolo:tit,slug:slug,stato:'bozza'}).select().single();
+  if(error){ toast('Errore: '+error.message); return; }
+  await caricaTenant(); apriCorso(data.id); toast('Corso creato (in bozza)');
+}
+async function salvaCorso(){
+  if(!CORSO_SEL)return;
+  const upd={titolo:$('coTit').value.trim(),slug:$('coSlug').value.trim().toLowerCase(),sottotitolo:$('coSub').value.trim()||null,
+    emoji:$('coEm').value.trim()||'📚',colore:$('coCol').value,fascia:$('coFascia').value,stato:$('coStato').value,
+    ordine:parseInt($('coOrd').value||0,10),descrizione:$('coDesc').value.trim()||null,prologo:($('coProl').value.trim()||null),
+    visibilita:$('coVis').value,
+    mascotte:mascotteCorsoPayload()};
+  if(!upd.titolo||!/^[a-z0-9][a-z0-9-]{1,40}$/.test(upd.slug)){ toast('Titolo obbligatorio e slug solo minuscole/numeri/trattini'); return; }
+  if(upd.stato==='pubblicato'&&CORSO_SEL.stato!=='pubblicato'&&!(await corsoPubblicabile(CORSO_SEL)))return;   /* limite del piano */
+  const {error}=await sb.from('edu_corsi').update(upd).eq('id',CORSO_SEL.id);
+  if(error){ toast('Errore: '+error.message); return; }
+  Object.assign(CORSO_SEL,upd); toast('Corso salvato · in classe entro 5 minuti (cache)'); renderCorsi(); caricaLezioni();
+}
+async function eliminaCorso(){
+  if(!CORSO_SEL)return;
+  if(!confirm('Eliminare il corso «'+CORSO_SEL.titolo+'»? Le lezioni NON vengono cancellate: restano senza corso.'))return;
+  const {error}=await sb.from('edu_corsi').delete().eq('id',CORSO_SEL.id);
+  if(error){ toast('Errore: '+error.message); return; }
+  CORSO_SEL=null; $('corsoForm').classList.add('hidden'); await caricaTenant(); renderCorsi(); caricaLezioni(); toast('Corso eliminato');
+}
+function apriPlayerCliente(){ const cl=CLIENTI.find(c=>c.id===$('cCliente').value); if(cl)window.open(APP_BASE+cl.slug+'/','_blank'); }
+
+/* ---- CLIENTI & LICENZE (admin) ---- */
+async function apriClienti(){
+  if(RUOLO!=='admin'){ toast('Solo admin'); return; }
+  await caricaTenant();
+  nascondiTutto();
+  $('cliPanel').classList.remove('hidden'); $('cliForm').classList.add('hidden'); CLI_SEL=null; renderClienti(); caricaRichieste();
+}
+function chiudiClienti(){ $('cliPanel').classList.add('hidden'); if(LEZ)$('lezEditor').classList.remove('hidden'); else $('benv').classList.remove('hidden'); caricaLezioni(); }
+function licenzaAttiva(cl){ return cl.licenza_stato==='attiva' && (!cl.licenza_fine || cl.licenza_fine>=new Date().toISOString().slice(0,10)); }
+function renderClienti(){
+  $('cliList').innerHTML=CLIENTI.map(cl=>'<button class="lezItem'+(CLI_SEL&&CLI_SEL.id===cl.id?' on':'')+'" onclick="apriCliente(\''+cl.id+'\')"><span class="em">🏢</span><span><b>'+esc(cl.nome)+'</b><br><small>/'+esc(cl.slug)+'/ · '+esc(cl.piano)+' · '+CORSI.filter(co=>co.proprietario_id===cl.id).length+' corsi</small></span><span class="badge '+(licenzaAttiva(cl)?'pub':'soon')+'">'+(licenzaAttiva(cl)?'ATTIVA':esc(cl.licenza_stato).toUpperCase())+(cl.licenza_fine?' · '+esc(cl.licenza_fine):'')+'</span></button>').join('')||'<p class="hint">Nessun cliente.</p>';
+}
+async function apriCliente(id){
+  CLI_SEL=CLIENTI.find(c=>c.id===id); if(!CLI_SEL)return; const cl=CLI_SEL, b=cl.brand||{};
+  $('cliTit').textContent='🏢 '+cl.nome;
+  $('clNome').value=cl.nome||''; $('clSlug').value=cl.slug||''; $('clBTit').value=b.titolo||''; $('clBSub').value=b.sottotitolo||'';
+  $('clPiano').value=cl.piano||'base'; $('clStato').value=cl.licenza_stato||'attiva'; $('clIni').value=cl.licenza_inizio||''; $('clFine').value=cl.licenza_fine||'';
+  $('clRefNome').value=cl.contatto_nome||''; $('clRefMail').value=cl.contatto_email||''; $('clNote').value=cl.note||'';
+  $('cliForm').classList.remove('hidden'); renderClienti(); abbonamentoRender();
+  const {data}=await sb.from('edu_utenti').select('id,nome,ruolo,cliente_id,istituto').order('nome');   /* edu_utenti non ha email: sta in auth.users */
+  const ut=data||[];
+  $('cliUtenti').innerHTML=ut.map(u=>'<div class="grid2" style="align-items:center;margin-bottom:6px"><div><b>'+esc(u.nome||u.email||u.id)+'</b><br><small>'+esc(u.email||u.istituto||(u.id===USER.id?'(tu)':String(u.id).slice(0,8)+'…'))+'</small></div><div style="display:flex;gap:6px;align-items:center">'
+    +'<select id="ur_'+u.id+'"><option value="docente"'+(u.ruolo==='docente'?' selected':'')+'>docente</option><option value="editor"'+(u.ruolo==='editor'?' selected':'')+'>editor</option><option value="admin"'+(u.ruolo==='admin'?' selected':'')+'>admin (tutto)</option></select>'
+    +'<select id="uc_'+u.id+'"><option value="">— nessun cliente —</option>'+CLIENTI.map(c=>'<option value="'+c.id+'"'+(u.cliente_id===c.id?' selected':'')+'>'+esc(c.nome)+'</option>').join('')+'</select>'
+    +'<button class="btn mini" onclick="salvaUtente(\''+u.id+'\')">Salva</button></div></div>').join('')||'<p class="hint">Nessun utente.</p>';
+}
+async function salvaUtente(id){
+  const ruolo=$('ur_'+id).value, cliente_id=$('uc_'+id).value||null;
+  if(ruolo!=='admin'&&!cliente_id){ toast('Editor e docenti devono avere un cliente'); return; }
+  const {error}=await sb.from('edu_utenti').update({ruolo:ruolo,cliente_id:ruolo==='admin'?null:cliente_id}).eq('id',id);
+  if(error){ toast('Errore: '+error.message); return; } toast('Utente aggiornato');
+}
+const SLUG_RISERVATI=['app','mestieri','saline','attiva','api','live','dati','regia','admin','edu'];
+function slugOk(s){ return /^[a-z0-9][a-z0-9-]{1,40}$/.test(s) && !SLUG_RISERVATI.includes(s) && !/^ver\d+$/.test(s); }
+async function nuovoCliente(){
+  const nome=prompt('Nome del nuovo cliente (es. Istituto Comprensivo Pagoto):'); if(!nome)return;
+  let slug=nome.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'cliente';
+  if(!slugOk(slug)) slug='c-'+slug;                       /* evita gli slug riservati (app, ver7, api…) */
+  const {data,error}=await sb.from('edu_clienti').insert({nome:nome,slug:slug,brand:{titolo:nome},licenza_inizio:new Date().toISOString().slice(0,10)}).select().single();
+  if(error){ toast('Errore: '+error.message); return; }
+  await caricaTenant(); apriCliente(data.id); toast('Cliente creato: '+APP_BASE+slug+'/');
+}
+async function salvaCliente(){
+  if(!CLI_SEL)return;
+  const upd={nome:$('clNome').value.trim(),slug:$('clSlug').value.trim().toLowerCase(),
+    brand:Object.assign({},CLI_SEL.brand||{},{titolo:$('clBTit').value.trim()||$('clNome').value.trim(),sottotitolo:$('clBSub').value.trim()}),
+    piano:$('clPiano').value,licenza_stato:$('clStato').value,licenza_inizio:$('clIni').value||null,licenza_fine:$('clFine').value||null,
+    contatto_nome:$('clRefNome').value.trim()||null,contatto_email:$('clRefMail').value.trim()||null,note:$('clNote').value.trim()||null};
+  if(!upd.nome||!/^[a-z0-9][a-z0-9-]{1,40}$/.test(upd.slug)){ toast('Nome obbligatorio e slug solo minuscole/numeri/trattini'); return; }
+  if(!slugOk(upd.slug)){ toast('Questo slug è riservato dal sistema ('+upd.slug+'): scegline un altro'); return; }
+  const {error}=await sb.from('edu_clienti').update(upd).eq('id',CLI_SEL.id);
+  if(error){ toast('Errore: '+error.message); return; }
+  Object.assign(CLI_SEL,upd); toast('Cliente salvato · il player lo vede entro 5 minuti (cache)'); renderClienti();
+}
+function copiaLinkCliente(){ if(!CLI_SEL)return; const u=APP_BASE+CLI_SEL.slug+'/'; navigator.clipboard&&navigator.clipboard.writeText(u).then(()=>toast('Copiato: '+u),()=>prompt('Link del player:',u)); }
+
+/* ======================= MIGR. 26 · scuole, catalogo, duplicazione ======================= */
+let SCUOLE=[], SCUOLA_SEL=null, CATALOGO_SEL=null, CAT_RIGHE=[];
+
+/* ---- SCUOLE ---- */
+async function apriScuole(){
+  await caricaTenant();
+  if(!selectClienti($('scCliente'))){ toast('Nessun cliente associato al tuo account'); return; }
+  nascondiTutto(); $('scuolePanel').classList.remove('hidden'); $('scuolaForm').classList.add('hidden'); SCUOLA_SEL=null;
+  await renderScuole();
+}
+async function renderScuole(){
+  const cl=clienteSel('scCliente'); if(!cl)return;
+  const {data,error}=await sb.from('edu_scuole').select('*').eq('cliente_id',cl.id).order('nome');
+  if(error){ toast('Errore: '+error.message); return; }
+  SCUOLE=data||[];
+  const oggi=new Date().toISOString().slice(0,10);
+  const attiva=s=>s.licenza_stato==='attiva'&&(!s.licenza_a||s.licenza_a>=oggi);
+  $('scuoleList').innerHTML=SCUOLE.length?SCUOLE.map(s=>'<button class="lezItem'+(SCUOLA_SEL&&SCUOLA_SEL.id===s.id?' on':'')+'" onclick="apriScuola(\''+s.id+'\')"><span class="em">🏫</span><span><b>'+esc(s.nome)+'</b>'+(s.citta?' <small class="hint">'+esc(s.citta)+'</small>':'')+'<br><small class="hint">'+esc(s.tipo)+(s.licenza_a?' · fino al '+esc(s.licenza_a):'')+'</small></span><span class="badge '+(attiva(s)?'pub':'soon')+'">'+(attiva(s)?'ATTIVA':esc(s.licenza_stato).toUpperCase())+'</span></button>').join('')
+    :'<p class="hint">Nessuna scuola: creane una e poi aggiungi le sue classi.</p>';
+}
+async function apriScuola(id){
+  SCUOLA_SEL=SCUOLE.find(s=>s.id===id); if(!SCUOLA_SEL)return; const s=SCUOLA_SEL;
+  $('scTit').textContent='🏫 '+s.nome;
+  $('sNome').value=s.nome||''; $('sCitta').value=s.citta||''; $('sRef').value=s.referente||''; $('sMail').value=s.email||'';
+  $('sTipo').value=s.tipo||'ospite'; $('sStato').value=s.licenza_stato||'attiva';
+  $('sDa').value=s.licenza_da||''; $('sA').value=s.licenza_a||''; $('sNote').value=s.note||'';
+  $('scuolaForm').classList.remove('hidden'); renderScuole(); renderClassi();
+}
+async function nuovaScuola(){
+  const cl=clienteSel('scCliente'); if(!cl){ toast('Scegli il cliente'); return; }
+  const nome=prompt('Nome dell\'istituto (es. IC Pagoto, Erice):'); if(!nome)return;
+  const {data,error}=await sb.from('edu_scuole').insert({cliente_id:cl.id,nome:nome,tipo:'ospite',licenza_da:new Date().toISOString().slice(0,10)}).select().single();
+  if(error){ toast('Errore: '+error.message); return; }
+  await renderScuole(); apriScuola(data.id); toast('Scuola creata');
+}
+async function salvaScuola(){
+  if(!SCUOLA_SEL)return;
+  const upd={nome:$('sNome').value.trim(),citta:$('sCitta').value.trim()||null,referente:$('sRef').value.trim()||null,
+    email:$('sMail').value.trim()||null,tipo:$('sTipo').value,licenza_stato:$('sStato').value,
+    licenza_da:$('sDa').value||null,licenza_a:$('sA').value||null,note:$('sNote').value.trim()||null};
+  if(!upd.nome){ toast('Il nome è obbligatorio'); return; }
+  const {error}=await sb.from('edu_scuole').update(upd).eq('id',SCUOLA_SEL.id);
+  if(error){ toast('Errore: '+error.message); return; }
+  Object.assign(SCUOLA_SEL,upd); toast('Scuola salvata'); renderScuole();
+}
+async function eliminaScuola(){
+  if(!SCUOLA_SEL)return;
+  if(!confirm('Eliminare «'+SCUOLA_SEL.nome+'»? Le sue classi restano ma senza scuola (le statistiche già raccolte non si perdono).'))return;
+  const {error}=await sb.from('edu_scuole').delete().eq('id',SCUOLA_SEL.id);
+  if(error){ toast('Errore: '+error.message); return; }
+  SCUOLA_SEL=null; $('scuolaForm').classList.add('hidden'); renderScuole(); toast('Scuola eliminata');
+}
+
+/* ---- MASCOTTE DEL CORSO (video per momento e fascia, come nel pannello progetti) ---- */
+function renderMascotteCorso(video){
+  const v=video||{};
+  const cell=(k,liv)=>{ const src=((v[liv]||{})[k])||''; return `<div class="mascCell"><input type="text" id="cm_${k}_${liv}" value="${esc(src)}" placeholder="${liv==='entrambi'?'ID YouTube o bunny:GUID':'—'}"></div>`; };
+  $('coMascGrid').innerHTML='<div class="hd">Momento</div><div class="hd">Entrambi</div><div class="hd">Primaria 8–10</div><div class="hd">Medie 11–13</div>'+
+    MASC_CHIAVI.map(([k,t,d])=>`<div class="k">${t}<small>${d}</small></div>${cell(k,'entrambi')}${cell(k,'junior')}${cell(k,'senior')}`).join('');
+}
+function mascotteCorsoPayload(){
+  const nome=$('coMascNome').value.trim(), img=$('coMascImg').value.trim();
+  const video={entrambi:{},junior:{},senior:{}}; let nVideo=0;
+  MASC_CHIAVI.forEach(([k])=>['entrambi','junior','senior'].forEach(liv=>{ const el=$('cm_'+k+'_'+liv); const s=el?el.value.trim():''; if(s){ video[liv][k]=s; nVideo++; } }));
+  if(!nome&&!img&&!nVideo) return null;                      /* nessuna mascotte */
+  if(img&&!/^https:\/\//i.test(img)){ toast('L\'immagine della mascotte deve essere un URL https'); }
+  return {nome:nome,img:img,junior:$('coMascJun').checked,senior:$('coMascSen').checked,quiz_sempre:$('coMascQuiz').checked,video:video};
+}
+async function riempiImportaMascotte(){
+  const sel=$('coMascImporta'); if(!sel)return;
+  const {data}=await sb.from('edu_progetti').select('progetto,nome,mascotte_nome');
+  sel.innerHTML='<option value="">Importa da progetto…</option>'+(data||[]).map(p=>'<option value="'+esc(p.progetto)+'">'+esc(p.nome||p.progetto)+(p.mascotte_nome?' · '+esc(p.mascotte_nome):'')+'</option>').join('');
+}
+async function importaMascotteCorso(){
+  const prog=$('coMascImporta').value; if(!prog){ toast('Scegli il progetto da cui importare'); return; }
+  const p=(await sb.from('edu_progetti').select('*').eq('progetto',prog).maybeSingle()).data;
+  const righe=(await sb.from('edu_mascotte').select('*').eq('progetto',prog)).data||[];
+  if(!p){ toast('Progetto non trovato'); return; }
+  $('coMascNome').value=p.mascotte_nome||''; $('coMascImg').value=p.mascotte_img||'';
+  $('coMascJun').checked=p.mascotte_junior!==false; $('coMascSen').checked=p.mascotte_senior!==false; $('coMascQuiz').checked=p.quiz_sempre!==false;
+  const video={entrambi:{},junior:{},senior:{}};
+  righe.forEach(r=>{ if(r.video&&r.attivo!==false&&video[r.livello]) video[r.livello][r.chiave]=r.video; });
+  renderMascotteCorso(video); toast('Mascotte importata da «'+(p.nome||prog)+'»: ricordati di salvare il corso');
+}
+
+/* ---- ABBONAMENTO STRIPE (Fase 2): il manager comanda, Stripe esegue, il webhook aggiorna ---- */
+const AB_BASE = (typeof APP_BASE==='string' ? APP_BASE.replace(/\/$/,'') + '/app/' : './');
+async function stripeCall(azione, corpo){
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session){ toast('Sessione scaduta: rientra'); return null; }
+  let r; try {
+    r = await fetch(AB_BASE+'stripe.php?azione='+azione, {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token}, body: JSON.stringify(corpo||{})});
+  } catch(e){ toast('Rete: '+e.message); return null; }
+  let j=null; try { j = await r.json(); } catch(e){}
+  if(!j || j.ok===false){ toast((j&&j.err)||('Errore '+r.status)); return null; }
+  return j;
+}
+const AB_ETICHETTE = {nessuno:'Nessun abbonamento', in_attesa:'⏳ In attesa del pagamento', attivo:'✅ Attivo', in_pausa:'⏸ In pausa', insoluto:'⚠️ Pagamento non riuscito', annullato:'✕ Annullato', scaduto:'Scaduto'};
+const AB_PIANI = {base:'Base', pro:'Pro', premium:'Premium'};
+async function abbonamentoRender(){
+  const cl=CLI_SEL; if(!cl)return;
+  $('abEmail').textContent = cl.contatto_email || 'nessuna email: inseriscila nel referente e salva';
+  const {data} = await sb.rpc('edu_abbonamento_cliente',{p_cliente:cl.id});
+  const ab = data || {stato:'nessuno', pagamenti:[]};
+  const st = ab.stato || 'nessuno';
+  let riga = '<b>'+(AB_ETICHETTE[st]||st)+'</b>';
+  if(ab.piano) riga += ' · piano <b>'+esc(AB_PIANI[ab.piano]||ab.piano)+'</b> '+(ab.periodo==='mese'?'mensile':'annuale');
+  if(ab.fine && st!=='nessuno' && st!=='annullato') riga += ' · fino al <b>'+dataIt(ab.fine)+'</b>'+(ab.annulla_a_fine?' <span class="badge soon">NON SI RINNOVA</span>':'');
+  if(st==='annullato' && ab.fine) riga += ' · terminato il '+dataIt(ab.fine);
+  if(ab.link && st==='in_attesa') riga += '<br><small>Link di pagamento: <a href="'+esc(ab.link)+'" target="_blank" rel="noopener">'+esc(ab.link)+'</a></small>';
+  $('abStato').innerHTML = riga;
+  const attivoOrSim = ['in_attesa','attivo','in_pausa','insoluto'].includes(st);
+  $('abCrea').disabled = attivoOrSim; $('abCrea').style.opacity = attivoOrSim?'.5':'1';
+  $('abPausa').style.display = (st==='attivo'||st==='insoluto')?'':'none';
+  $('abRiprendi').style.display = (st==='in_pausa')?'':'none';
+  $('abAnnulla').style.display = attivoOrSim?'':'none';
+  $('abLink').style.display = (st==='in_attesa'||st==='insoluto')?'':'none';
+  $('abSync').style.display = (st==='nessuno')?'none':'';
+  const pg = ab.pagamenti||[];
+  $('abStorico').innerHTML = pg.length ? 'Storico: '+pg.slice(0,6).map(p=>esc(dataIt(p.quando))+' · '+esc(p.tipo.replace('customer.subscription.','abb. ').replace('invoice.','fattura '))+(p.importo_cent?' · '+(p.importo_cent/100).toFixed(2)+' €':'')+(p.link&&p.tipo==='invoice.paid'?' · <a href="'+esc(p.link)+'" target="_blank" rel="noopener">ricevuta</a>':'')).join('<br>') : '';
+}
+async function abbonamentoCrea(){
+  const cl=CLI_SEL; if(!cl)return;
+  if(!cl.contatto_email){ toast('Prima inserisci l\'email del referente e salva il cliente'); return; }
+  const piano=$('abPiano').value, periodo=$('abPeriodo').value;
+  if(!confirm('Creare l\'abbonamento '+AB_PIANI[piano]+' '+(periodo==='mese'?'mensile':'annuale')+' per '+cl.nome+'?\n\nStripe invierà il link di pagamento a '+cl.contatto_email+'.'))return;
+  const j=await stripeCall('crea',{cliente_id:cl.id, piano:piano, periodo:periodo});
+  if(!j)return; toast(j.messaggio||'Abbonamento creato'); if(j.link){ try{ await navigator.clipboard.writeText(j.link); }catch(e){} }
+  await caricaTenant(); CLI_SEL=CLIENTI.find(c=>c.id===cl.id)||cl; abbonamentoRender();
+}
+async function abbonamentoPausa(){
+  if(!CLI_SEL||!confirm('Mettere in pausa l\'abbonamento? Nessun addebito e licenza sospesa finché non lo riprendi.'))return;
+  const j=await stripeCall('pausa',{cliente_id:CLI_SEL.id}); if(j){ toast(j.messaggio); await caricaTenant(); CLI_SEL=CLIENTI.find(c=>c.id===CLI_SEL.id)||CLI_SEL; abbonamentoRender(); }
+}
+async function abbonamentoRiprendi(){
+  if(!CLI_SEL)return; const j=await stripeCall('riprendi',{cliente_id:CLI_SEL.id}); if(j){ toast(j.messaggio); await caricaTenant(); CLI_SEL=CLIENTI.find(c=>c.id===CLI_SEL.id)||CLI_SEL; abbonamentoRender(); }
+}
+async function abbonamentoAnnulla(){
+  if(!CLI_SEL)return;
+  const scelta=prompt('Annullare l\'abbonamento di '+CLI_SEL.nome+'?\n\nScrivi FINE per chiuderlo a fine periodo pagato (resta attivo fino alla scadenza)\noppure SUBITO per chiuderlo adesso (licenza chiusa all\'istante).','FINE');
+  if(scelta===null)return; const q=scelta.trim().toUpperCase(); if(q!=='FINE'&&q!=='SUBITO'){ toast('Scrivi FINE oppure SUBITO'); return; }
+  const j=await stripeCall('annulla',{cliente_id:CLI_SEL.id, quando: q==='SUBITO'?'subito':'fine_periodo'}); if(j){ toast(j.messaggio); await caricaTenant(); CLI_SEL=CLIENTI.find(c=>c.id===CLI_SEL.id)||CLI_SEL; abbonamentoRender(); }
+}
+async function abbonamentoStato(){
+  if(!CLI_SEL)return; const j=await stripeCall('stato',{cliente_id:CLI_SEL.id}); if(j){ toast('Stato da Stripe: '+(AB_ETICHETTE[j.stato]||j.stato)); await caricaTenant(); CLI_SEL=CLIENTI.find(c=>c.id===CLI_SEL.id)||CLI_SEL; abbonamentoRender(); }
+}
+async function abbonamentoLink(){
+  if(!CLI_SEL)return; const j=await stripeCall('link',{cliente_id:CLI_SEL.id}); if(j&&j.link){ copiaTesto(j.link); toast(j.messaggio||'Link copiato'); }
+}
+
+/* ---- CATALOGO: chi può usare un corso ---- */
+async function apriCatalogo(corsoId){
+  await caricaTenant();
+  const miei=CORSI.filter(co=>RUOLO==='admin'||co.proprietario_id===MIO_CLIENTE);
+  if(!miei.length){ toast('Nessun corso di cui sei proprietario'); return; }
+  $('catCorso').innerHTML=miei.map(co=>'<option value="'+co.id+'">'+esc(co.emoji||'📚')+' '+esc(co.titolo)+'</option>').join('');
+  if(corsoId)$('catCorso').value=corsoId;
+  await caricaDirClienti();
+  $('catDest').innerHTML=DIR_CLIENTI.map(cl=>'<option value="'+cl.id+'">'+esc(cl.nome)+'</option>').join('');
+  $('catDa').value=new Date().toISOString().slice(0,10);
+  nascondiTutto(); $('catPanel').classList.remove('hidden'); await renderCatalogo();
+}
+async function renderCatalogo(){
+  const co=CORSI.find(c=>c.id===$('catCorso').value); if(!co)return;
+  CATALOGO_SEL=co;
+  const propNome=nomeCliente(co.proprietario_id);
+  $('catInfo').innerHTML='Proprietario: <b>'+esc(propNome||'—')+'</b> · '+(co.visibilita==='catalogo'?'condivisibile con altri clienti':'privato (per condividerlo, cambia «Condivisibile» nell\'editor del corso)');
+  const {data,error}=await sb.from('edu_catalogo').select('*').eq('corso_id',co.id);
+  if(error){ $('catList').textContent='Errore: '+error.message; return; }
+  CAT_RIGHE=data||[];
+  const oggi=new Date().toISOString().slice(0,10);
+  const valida=k=>k.stato==='attivo'&&(!k.da||k.da<=oggi)&&(!k.a||k.a>=oggi);
+  $('catList').innerHTML=CAT_RIGHE.length?CAT_RIGHE.map(k=>{
+    const clNome=nomeCliente(k.cliente_id); const proprio=co.proprietario_id===k.cliente_id;
+    return '<div class="grid2" style="align-items:center;border-top:1px solid #eadfce;padding:8px 0"><div><b>'+esc(clNome||k.cliente_id)+'</b>'+(proprio?' <span class="badge pub">PROPRIETARIO</span>':'')+'<br><small class="hint">'+(k.da?'dal '+esc(k.da):'')+(k.a?' al '+esc(k.a):' · senza scadenza')+(k.note?' · '+esc(k.note):'')+'</small></div>'+
+      '<div style="display:flex;gap:6px;justify-content:flex-end;align-items:center"><span class="badge '+(valida(k)?'pub':'soon')+'">'+(valida(k)?'ATTIVA':'NON ATTIVA')+'</span>'+
+      '<input type="date" id="cata_'+k.id+'" value="'+(k.a||'')+'" title="Scadenza" onchange="aggiornaLicenzaCorso(\''+k.id+'\')">'+
+      (proprio?'':'<button class="btn mini" onclick="revocaCorso(\''+k.id+'\')" style="color:#b8506a">Revoca</button>')+'</div></div>';
+  }).join(''):'<p class="hint">Nessun cliente ha ancora questo corso.</p>';
+}
+async function concediCorso(){
+  const co=CATALOGO_SEL; if(!co)return;
+  const dest=$('catDest').value; if(!dest){ toast('Scegli il cliente'); return; }
+  if(co.visibilita!=='catalogo'&&co.proprietario_id!==dest){ toast('Questo corso non è condivisibile: apri l\'editor del corso e metti «Condivisibile» su sì'); return; }
+  const riga={corso_id:co.id,cliente_id:dest,stato:'attivo',da:$('catDa').value||null,a:$('catA').value||null};
+  const {error}=await sb.from('edu_catalogo').insert(riga);
+  if(error){ toast(error.message.includes('duplicate')?'Questo cliente ha già il corso':'Errore: '+error.message); return; }
+  toast('Corso concesso in licenza'); renderCatalogo();
+}
+async function aggiornaLicenzaCorso(id){
+  const a=$('cata_'+id).value||null;
+  const {error}=await sb.from('edu_catalogo').update({a:a}).eq('id',id);
+  if(error){ toast('Errore: '+error.message); return; }
+  toast(a?'Scadenza aggiornata al '+a:'Licenza senza scadenza'); renderCatalogo();
+}
+async function revocaCorso(id){
+  if(!confirm('Revocare l\'accesso a questo corso? Il cliente non lo vedrà più (i contenuti non vengono cancellati).'))return;
+  const {error}=await sb.from('edu_catalogo').delete().eq('id',id);
+  if(error){ toast('Errore: '+error.message); return; }
+  toast('Accesso revocato'); renderCatalogo();
+}
+async function duplicaCorso(){
+  const co=CATALOGO_SEL; if(!co)return;
+  const dest=$('catDest').value; if(!dest){ toast('Scegli il cliente di destinazione'); return; }
+  const clNome=nomeCliente(dest)||'';
+  if(!confirm('Duplicare «'+co.titolo+'» dentro '+clNome+'?\n\nLa copia sarà modificabile da quel cliente e NON riceverà i tuoi aggiornamenti futuri. Se invece vuoi che veda sempre la versione aggiornata, usa «Concedi in licenza».'))return;
+  const {data,error}=await sb.rpc('edu_duplica_corso',{p_corso:co.id,p_cliente_dest:dest,p_nuovo_slug:null});
+  if(error){ toast('Errore: '+error.message); return; }
+  await caricaTenant(); toast('Corso duplicato (in bozza) in '+clNome); renderCatalogo();
+}
+
+/* ======================= FASE 4 · statistiche, classi, richieste, piani ======================= */
+function chiudiPannello(id){ $(id).classList.add('hidden'); if(LEZ)$('lezEditor').classList.remove('hidden'); else $('benv').classList.remove('hidden'); }
+function nascondiTutto(){ ['benv','lezEditor','mascPanel','corsiPanel','cliPanel','statsPanel','scuolePanel','catPanel'].forEach(i=>{const e=$(i); if(e)e.classList.add('hidden');}); }
+function selectClienti(sel){ const vis=clientiVisibili(); sel.innerHTML=vis.map(cl=>'<option value="'+cl.slug+'">'+esc(cl.nome)+'</option>').join(''); return vis.length; }
+function pct(n){ return (n===null||n===undefined)?'—':n+'%'; }
+function dataIt(s){ if(!s)return '—'; const d=new Date(s); return isNaN(d)?s:d.toLocaleDateString('it-IT'); }
+
+/* ---- STATISTICHE ---- */
+async function apriStats(){
+  await caricaTenant();
+  if(!selectClienti($('stCliente'))){ toast('Nessun cliente associato al tuo account'); return; }
+  nascondiTutto(); $('statsPanel').classList.remove('hidden'); await caricaStats();
+}
+async function caricaStats(){
+  const slug=$('stCliente').value; if(!slug)return;
+  const {data,error}=await sb.rpc('edu_stats_cliente',{p_slug:slug});
+  if(error){ toast('Errore: '+error.message); return; }
+  renderStats(data||{});
+}
+function renderStats(s){
+  const t=s.totali||{};
+  const kpi=[['Scuole',t.scuole||0],['Classi attive',t.classi||0],['Lezioni avviate',t.avviate||0],['Completate',t.completate||0],['Quiz svolti',t.quiz||0],['Partite live',t.partite_live||0],['Media risposte giuste',pct(t.pct_medio)]];
+  $('stKpi').innerHTML=kpi.map(k=>'<div class="card" style="margin:0;padding:10px 12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#b8506a">'+k[1]+'</div><div class="hint" style="margin:0">'+k[0]+'</div></div>').join('');
+  const vuoto=!(t.avviate||t.quiz); $('stVuoto').classList.toggle('hidden',!vuoto);
+  const ps=s.per_scuola||[];
+  $('stScuole').innerHTML=ps.length?'<table style="width:100%;font-size:13px;border-collapse:collapse">'+
+    '<tr style="text-align:left;color:#6b625d"><th>Scuola</th><th>Classi</th><th>Avviate</th><th>Completate</th><th>Media</th><th>Ultima attività</th></tr>'+
+    ps.map(r=>'<tr style="border-top:1px solid #eadfce"><td><b>'+esc(r.scuola||'—')+'</b></td><td>'+r.classi+'</td><td>'+r.avviate+'</td><td>'+r.completate+'</td><td><b>'+pct(r.pct_medio)+'</b></td><td>'+dataIt(r.ultima)+'</td></tr>').join('')+'</table>':'<p class="hint">Nessun dato per scuola.</p>';
+  const pc=s.per_classe||[];
+  $('stClassi').innerHTML=pc.length?'<table style="width:100%;font-size:13px;border-collapse:collapse">'+
+    '<tr style="text-align:left;color:#6b625d"><th>Classe</th><th>Avviate</th><th>Completate</th><th>Quiz</th><th>Live</th><th>Media</th><th>Ultima attività</th></tr>'+
+    pc.map(r=>'<tr style="border-top:1px solid #eadfce"><td><b>'+esc(r.nome||r.codice_classe)+'</b>'+(r.nome?' <small class="hint">'+esc(r.codice_classe)+'</small>':'')+(r.anno?' <small class="hint">'+esc(r.anno)+'</small>':'')+'</td><td>'+r.avviate+'</td><td>'+r.completate+'</td><td>'+r.quiz+'</td><td>'+r.partite_live+'</td><td><b>'+pct(r.pct_medio)+'</b></td><td>'+dataIt(r.ultima)+'</td></tr>').join('')+'</table>':'<p class="hint">Nessuna classe ancora.</p>';
+  const pl=s.per_lezione||[];
+  $('stLezioni').innerHTML=pl.length?'<table style="width:100%;font-size:13px;border-collapse:collapse">'+
+    '<tr style="text-align:left;color:#6b625d"><th>Lezione</th><th>Avviate</th><th>Completate</th><th>Quiz</th><th>Media</th></tr>'+
+    pl.map(r=>'<tr style="border-top:1px solid #eadfce"><td><b>'+esc(r.lezione)+'</b></td><td>'+r.avviate+'</td><td>'+r.completate+'</td><td>'+r.quiz+'</td><td><b>'+pct(r.pct_medio)+'</b>'+(r.pct_medio!==null&&r.pct_medio<60?' <span class="badge soon">DA RIVEDERE</span>':'')+'</td></tr>').join('')+'</table>':'<p class="hint">Nessuna lezione ancora.</p>';
+  const g=s.ultimi_30gg||[]; const max=Math.max(1,...g.map(x=>x.n));
+  $('stGiorni').innerHTML=g.map(x=>'<div title="'+esc(x.giorno)+': '+x.n+'" style="flex:1;background:#c9a15a;border-radius:3px 3px 0 0;height:'+Math.max(4,Math.round(70*x.n/max))+'px"></div>').join('')||'<span class="hint">nessuna attività negli ultimi 30 giorni</span>';
+}
+
+/* ---- CLASSI ---- */
+/* apriClassi: rimossa (le classi vivono dentro Scuole e classi) */
+function clienteSel(sel){ return CLIENTI.find(c=>c.slug===$(sel).value); }
+async function renderClassi(){
+  const cl=clienteSel('scCliente'); if(!cl||!SCUOLA_SEL)return;
+  const {data,error}=await sb.from('edu_classi').select('*').eq('scuola_id',SCUOLA_SEL?SCUOLA_SEL.id:'-').order('creato_il');
+  if(error){ toast('Errore: '+error.message); return; }
+  const rows=data||[];
+  $('classiList').innerHTML=rows.length?rows.map(r=>{ const link=APP_BASE+cl.slug+'/?classe='+encodeURIComponent(r.codice);
+    return '<div class="grid2" style="align-items:center;border-top:1px solid #eadfce;padding:8px 0"><div><b>'+esc(r.nome||r.codice)+'</b> <code>'+esc(r.codice)+'</code>'+(r.anno?' <small class="hint">'+esc(r.anno)+'</small>':'')+'<br><small class="hint">'+esc(link)+'</small></div>'+
+      '<div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn mini" onclick="copiaTesto(\''+link+'\')">🔗 Copia link</button><button class="btn mini" onclick="rinominaClasse(\''+r.id+'\',\''+esc(r.nome||'')+'\')">✏️</button><button class="btn mini" onclick="eliminaClasse(\''+r.id+'\')" style="color:#b8506a">✕</button></div></div>'; }).join('')
+    :'<p class="hint">Nessuna classe: creane una e dai il link alla maestra.</p>';
+}
+function codiceClasse(cl,nome){
+  const pref=(SCUOLA_SEL&&SCUOLA_SEL.nome?SCUOLA_SEL.nome:cl.slug).toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,4)||'SC';
+  const base=(nome||'').toUpperCase().replace(/[^A-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,8)||'CL';
+  const rnd=Math.random().toString(36).slice(2,6).toUpperCase();
+  return (pref+'-'+base+'-'+rnd).slice(0,20);
+}
+async function nuovaClasse(){
+  const cl=clienteSel('scCliente'); if(!cl){ toast('Scegli il cliente'); return; }
+  if(!SCUOLA_SEL){ toast('Scegli prima la scuola a cui appartiene la classe'); return; }
+  const lim=(await sb.rpc('edu_piano_limiti',{p_piano:cl.piano||'base'})).data||{};
+  const nEs=(await sb.from('edu_classi').select('id').eq('cliente_id',cl.id)).data||[];
+  if(lim.classi&&nEs.length>=lim.classi){ toast('Limite classi del piano '+(lim.nome||cl.piano)+' raggiunto ('+lim.classi+')'); return; }
+  const nome=prompt('Nome della classe (es. 5ª A · IC Pagoto):'); if(!nome)return;
+  const anno=prompt('Anno scolastico:', '2026/27')||null;
+  const codice=codiceClasse(cl,nome);
+  const {error}=await sb.from('edu_classi').insert({cliente_id:cl.id,scuola_id:SCUOLA_SEL.id,codice:codice,nome:nome,anno:anno,docente_id:USER.id});
+  if(error){ toast('Errore: '+error.message); return; }
+  toast('Classe creata: '+codice); renderClassi();
+}
+async function rinominaClasse(id,vecchio){ const n=prompt('Nome della classe:',vecchio); if(n===null)return; const {error}=await sb.from('edu_classi').update({nome:n}).eq('id',id); if(error){toast('Errore: '+error.message);return;} renderClassi(); }
+async function eliminaClasse(id){ if(!confirm('Eliminare questa classe? (le statistiche già raccolte restano)'))return; const {error}=await sb.from('edu_classi').delete().eq('id',id); if(error){toast('Errore: '+error.message);return;} renderClassi(); }
+function copiaTesto(t){ if(navigator.clipboard)navigator.clipboard.writeText(t).then(()=>toast('Copiato'),()=>prompt('Copia:',t)); else prompt('Copia:',t); }
+
+/* ---- RICHIESTE DI ATTIVAZIONE (admin) ---- */
+async function caricaRichieste(){
+  const {data,error}=await sb.from('edu_richieste').select('*').order('creato_il',{ascending:false});
+  if(error){ $('richList').textContent='Errore: '+error.message; return; }
+  const rows=data||[];
+  $('richList').innerHTML=rows.length?rows.map(r=>'<div class="grid2" style="align-items:center;border-top:1px solid #eadfce;padding:8px 0"><div><b>'+esc(r.scuola)+'</b> <span class="badge '+(r.stato==='nuova'?'soon':r.stato==='attivata'?'pub':'bozza')+'">'+esc(r.stato).toUpperCase()+'</span><br><small class="hint">'+esc(r.referente||'')+' · '+esc(r.email)+(r.telefono?' · '+esc(r.telefono):'')+' · '+dataIt(r.creato_il)+(r.interesse?' · interesse: '+esc(r.interesse):'')+'</small>'+(r.messaggio?'<br><small>'+esc(r.messaggio)+'</small>':'')+'</div>'+
+    '<div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">'+(r.stato!=='attivata'?'<button class="btn mini rosa" onclick="attivaDaRichiesta(\''+r.id+'\')">＋ Crea cliente</button>':'')+'<select id="rs_'+r.id+'" onchange="statoRichiesta(\''+r.id+'\',this.value)">'+['nuova','contattata','attivata','archiviata'].map(s=>'<option value="'+s+'"'+(r.stato===s?' selected':'')+'>'+s+'</option>').join('')+'</select></div></div>').join('')
+    :'<span class="hint">Nessuna richiesta.</span>';
+}
+async function statoRichiesta(id,stato){ const {error}=await sb.from('edu_richieste').update({stato:stato}).eq('id',id); if(error)toast('Errore: '+error.message); else toast('Richiesta: '+stato); }
+async function attivaDaRichiesta(id){
+  const r=((await sb.from('edu_richieste').select('*').eq('id',id).single()).data)||null; if(!r)return;
+  const slug=r.scuola.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'cliente';
+  const {data,error}=await sb.from('edu_clienti').insert({nome:r.scuola,slug:slug,brand:{titolo:r.scuola},contatto_nome:r.referente||null,contatto_email:r.email,licenza_inizio:new Date().toISOString().slice(0,10),note:'Da richiesta del '+dataIt(r.creato_il)+(r.messaggio?': '+r.messaggio:'')}).select().single();
+  if(error){ toast('Errore: '+error.message); return; }
+  await sb.from('edu_richieste').update({stato:'attivata',cliente_id:data.id}).eq('id',id);
+  await caricaTenant(); renderClienti(); apriCliente(data.id); caricaRichieste(); toast('Cliente creato da richiesta: '+APP_BASE+slug+'/');
+}
+
+/* ---- LIMITI DEL PIANO: corsi pubblicati ---- */
+async function corsoPubblicabile(co){
+  const cl=CLIENTI.find(c=>c.id===co.proprietario_id); if(!cl)return true;
+  const lim=(await sb.rpc('edu_piano_limiti',{p_piano:cl.piano||'base'})).data||{};
+  const altri=CORSI.filter(x=>x.proprietario_id===cl.id&&x.id!==co.id&&x.stato==='pubblicato').length;
+  if(lim.corsi_pubblicati&&altri>=lim.corsi_pubblicati){ toast('Il piano '+(lim.nome||cl.piano)+' consente '+lim.corsi_pubblicati+' corso pubblicato: metti in bozza un altro corso o alza il piano del cliente'); return false; }
+  return true;
+}
+
+async function apriMascotte(){
+  if(!(RUOLO==='admin'||RUOLO==='editor')){ toast('Solo admin ed editor'); return; }
+  const {data,error}=await sb.from('edu_progetti').select('*').order('progetto');
+  if(error){ toast('Errore: '+error.message+' (hai lanciato la migrazione 15?)'); return; }
+  MPROG=data||[];
+  $('mProg').innerHTML=MPROG.map(p=>`<option value="${esc(p.progetto)}">${esc(p.nome||p.progetto)}</option>`).join('');
+  if(LEZ&&MPROG.some(p=>p.progetto===LEZ.progetto))$('mProg').value=LEZ.progetto;
+  $('benv').classList.add('hidden'); $('lezEditor').classList.add('hidden'); $('corsiPanel').classList.add('hidden'); $('cliPanel').classList.add('hidden'); $('statsPanel').classList.add('hidden'); $('mascPanel').classList.remove('hidden');
+  await caricaMascotte();
+}
+function chiudiMascotte(){ $('mascPanel').classList.add('hidden'); if(LEZ)$('lezEditor').classList.remove('hidden'); else $('benv').classList.remove('hidden'); }
+async function caricaMascotte(){
+  const p=MPROG.find(x=>x.progetto===$('mProg').value); if(!p)return;
+  $('mNome').value=p.nome||''; $('mMascNome').value=p.mascotte_nome||''; $('mMascImg').value=p.mascotte_img||'';
+  $('mJun').checked=p.mascotte_junior!==false; $('mSen').checked=p.mascotte_senior!==false; $('mQuiz').checked=p.quiz_sempre!==false;
+  const {data}=await sb.from('edu_mascotte').select('*').eq('progetto',p.progetto);
+  MROWS=data||[];
+  const cell=(k,liv)=>{ const r=MROWS.find(x=>x.chiave===k&&x.livello===liv)||{video:'',attivo:true};
+    return `<div class="mascCell"><input type="checkbox" id="ma_${k}_${liv}" ${r.attivo!==false?'checked':''} title="attivo">
+      <input type="text" id="mv_${k}_${liv}" value="${esc(r.video||'')}" placeholder="${liv==='entrambi'?'ID YouTube o bunny:GUID':'—'}"></div>`; };
+  $('mascGrid').innerHTML='<div class="hd">Momento</div><div class="hd">Entrambi</div><div class="hd">Primaria 8–10</div><div class="hd">Medie 11–13</div>'+
+    MASC_CHIAVI.map(([k,t,d])=>`<div class="k">${t}<small>${d}</small></div>${cell(k,'entrambi')}${cell(k,'junior')}${cell(k,'senior')}`).join('');
+}
+async function salvaMascotte(){
+  const prog=$('mProg').value;
+  const up={nome:$('mNome').value.trim()||prog,mascotte_nome:$('mMascNome').value.trim(),mascotte_img:$('mMascImg').value.trim(),
+    mascotte_junior:$('mJun').checked,mascotte_senior:$('mSen').checked,quiz_sempre:$('mQuiz').checked,aggiornato_il:new Date().toISOString()};
+  const {error}=await sb.from('edu_progetti').update(up).eq('progetto',prog);
+  if(error){ toast('Errore: '+error.message); return; }
+  const rows=[];
+  MASC_CHIAVI.forEach(([k])=>['entrambi','junior','senior'].forEach(liv=>{
+    const v=($('mv_'+k+'_'+liv).value||'').trim(), att=$('ma_'+k+'_'+liv).checked;
+    const ex=MROWS.find(x=>x.chiave===k&&x.livello===liv);
+    if(v||ex)rows.push({progetto:prog,chiave:k,livello:liv,video:v,attivo:att});
+  }));
+  if(rows.length){
+    const {error:e2}=await sb.from('edu_mascotte').upsert(rows,{onConflict:'progetto,chiave,livello'});
+    if(e2){ toast('Errore: '+e2.message); return; }
+  }
+  Object.assign(MPROG.find(x=>x.progetto===prog),up);
+  toast('Mascotte salvata · in classe tra ≤5 min');
+}
+function testMascotte(){ const u=PLAYER_URLS[$('mProg').value]; if(u)window.open(u,'_blank'); else toast('Nessun player configurato per questo progetto'); }
+
+async function aggiungiMedia(){
+  const tipo=$('nmTipo').value, val=$('nmVal').value.trim();
+  if(!val){ toast('Inserisci GUID o URL'); return; }
+  const row={lezione_id:LEZ.id,ordine:MEDIA.length,tipo,note:$('nmNote').value||null,
+    guid:tipo==='video360'?val:null,url:tipo==='foto360'?val:null,
+    durata_s:tipo==='foto360'?(num($('nmDur').value)||20):null};
+  const {data,error}=await sb.from('edu_media').insert(row).select().single();
+  if(error){ toast('Errore: '+error.message); return; }
+  MEDIA.push(data); $('nmVal').value=''; $('nmNote').value='';
+  if(!selMedia)selezionaMedia(data.id); else renderMedia();
+  toast('Media aggiunto');
+}
+async function spostaMedia(id,dir){
+  const i=MEDIA.findIndex(m=>m.id===id), j=i+dir;
+  if(j<0||j>=MEDIA.length)return;
+  [MEDIA[i].ordine,MEDIA[j].ordine]=[MEDIA[j].ordine,MEDIA[i].ordine];
+  [MEDIA[i],MEDIA[j]]=[MEDIA[j],MEDIA[i]];
+  await Promise.all(MEDIA.map(m=>sb.from('edu_media').update({ordine:m.ordine}).eq('id',m.id)));
+  renderMedia(); renderTappe(); toast('Ordine aggiornato');
+}
+async function eliminaMedia(id){
+  if(!confirm('Eliminare questo media? Le tappe collegate verranno eliminate.'))return;
+  const {error}=await sb.from('edu_media').delete().eq('id',id);
+  if(error){ toast('Errore: '+error.message); return; }
+  MEDIA=MEDIA.filter(m=>m.id!==id);
+  TAPPE=TAPPE.filter(t=>t.media_id!==id);
+  if(selMedia&&selMedia.id===id){ selMedia=MEDIA[0]||null; caricaMediaNelViewer(); }
+  selTappa=null; $('tappaForm').classList.add('hidden');
+  renderMedia(); renderTappe(); toast('Media eliminato');
+}
+function selezionaMedia(id){
+  selMedia=MEDIA.find(m=>m.id===id)||null;
+  selTappa=null; selHot=null; setPlacing(false);
+  $('tappaForm').classList.add('hidden');
+  renderMedia(); renderTappe(); caricaMediaNelViewer();
+}
+
+/* ------------------------ VIEWER PIATTO + TIMELINE ------------------------
+   Il fotogramma equirettangolare è mostrato dal <video> stesso (nessun canvas,
+   nessuna texture WebGL: la classe di bug "nero con audio" non può esistere).
+   Mappatura fotogramma ↔ sfera:  u = (yaw+180)/360   v = (90-pitch)/180
+   con correzioni opzionali FLIP (+180°) e MIRROR (yaw negato), salvate in
+   localStorage, per allineare l'editor al player se servisse. */
+const edVid=()=>$('edVid');
+let EDFLIP=localStorage.getItem('edu_edflip')==='1', EDMIRROR=localStorage.getItem('edu_edmirror')==='1';
+function uvToYawPitch(u,v){
+  let yaw=u*360-180; if(EDMIRROR)yaw=-yaw; if(EDFLIP)yaw+=180;
+  while(yaw>180)yaw-=360; while(yaw<=-180)yaw+=360;
+  return {yaw:yaw, pitch:90-v*180};
+}
+function yawPitchToUV(yaw,pitch){
+  let y=yaw; if(EDFLIP)y-=180; if(EDMIRROR)y=-y;
+  while(y>180)y-=360; while(y<=-180)y+=360;
+  return {u:(y+180)/360, v:(90-pitch)/180};
+}
+function toggleGrid(){ const on=$('edGrid').style.display!=='none'; $('edGrid').style.display=on?'none':'block'; $('btnGrid').classList.toggle('on',!on); }
+function toggleMute(){ const v=edVid(); v.muted=!v.muted; $('btnMute').textContent=v.muted?'🔇':'🔊'; }
+function toggleFlip(){ EDFLIP=!EDFLIP; localStorage.setItem('edu_edflip',EDFLIP?'1':'0'); $('btnFlip').classList.toggle('on',EDFLIP); renderMarkers(); toast(EDFLIP?'Mappatura ruotata di 180°':'Mappatura normale'); }
+function toggleMirror(){ EDMIRROR=!EDMIRROR; localStorage.setItem('edu_edmirror',EDMIRROR?'1':'0'); $('btnMirror').classList.toggle('on',EDMIRROR); renderMarkers(); toast(EDMIRROR?'Mappatura specchiata':'Mappatura normale'); }
+/* stato del video nel viewer (la funzione era andata persa in una patch:
+   veniva chiamata sei volte e non esisteva → "vidStato is not a function") */
+function vidStato(t){ const e=document.getElementById('vidStato'); if(e)e.textContent=t||'—'; }
+function caricaMediaNelViewer(){
+  const v=edVid(), img=$('edImg');
+  if(_hls){try{_hls.destroy();}catch(e){} _hls=null;}
+  try{v.pause();}catch(e){}
+  renderMarkers(); renderTlDots();
+  if(!selMedia){ v.style.display='none'; img.style.display='none'; vidStato(''); return; }
+  if(selMedia.tipo==='foto360'){
+    v.style.display='none'; v.removeAttribute('src'); img.style.display='block'; img.src=selMedia.url;
+    $('tlTime').textContent='foto 360'; vidStato('foto 360');
+  }else{
+    img.style.display='none'; v.style.display='block';
+    vidStato('carico il video…');
+    const src={hls:CDN+selMedia.guid+'/playlist.m3u8',mp4:CDN+selMedia.guid+'/play_720p.mp4'};
+    if(window.Hls&&Hls.isSupported()){
+      _hls=new Hls(); _hls.loadSource(src.hls); _hls.attachMedia(v);
+      _hls.on(Hls.Events.ERROR,(e,d)=>{ if(d&&d.fatal){ console.log('[REGIA v13] HLS fatale, passo a MP4',d.type);
+        try{_hls.destroy();}catch(x){} _hls=null; v.src=src.mp4; v.load(); } });
+    }else if(v.canPlayType('application/vnd.apple.mpegurl')){ v.src=src.hls; }
+    else{ v.src=src.mp4; }
+  }
+}
+function fmt(x){x=Math.max(0,Math.floor(x||0));return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0');}
+function tlToggle(){ const v=edVid(); if(v.paused){v.play().catch(()=>{});} else v.pause(); }
+document.addEventListener('DOMContentLoaded',()=>{
+  const v=edVid(), r=$('tlRange'); let seeking=false;
+  v.addEventListener('timeupdate',()=>{
+    if(!seeking&&v.duration)r.value=Math.floor(v.currentTime/v.duration*1000);
+    $('tlTime').textContent=fmt(v.currentTime)+' / '+(v.duration?fmt(v.duration):'--:--');
+    $('tlPlay').textContent=v.paused?'▶':'⏸';
+  });
+  v.addEventListener('loadedmetadata',renderTlDots);
+  v.addEventListener('loadeddata',()=>{ console.log('[REGIA v13] loadeddata · readyState',v.readyState,'·',v.videoWidth+'×'+v.videoHeight); vidStato('pronto · '+v.videoWidth+'×'+v.videoHeight); });
+  $('btnFlip').classList.toggle('on',EDFLIP); $('btnMirror').classList.toggle('on',EDMIRROR);
+  v.addEventListener('playing',()=>{ vidStato('in riproduzione'); });
+  v.addEventListener('pause',()=>{ $('tlPlay').textContent='▶'; if(v.readyState>=2)vidStato('in pausa'); });
+  v.addEventListener('play',()=>$('tlPlay').textContent='⏸');
+  v.addEventListener('waiting',()=>vidStato('buffering…'));
+  v.addEventListener('error',()=>{ vidStato('ERRORE video: vedi console'); console.log('[REGIA] errore video',v.error); });
+  r.addEventListener('input',()=>{seeking=true;});
+  r.addEventListener('change',()=>{ if(v.duration)v.currentTime=r.value/1000*v.duration; seeking=false; });
+});
+function salta(s){ const v=edVid(); if(v.duration){ v.currentTime=Math.max(0,Math.min(v.duration,v.currentTime+s)); } }
+function renderTlDots(){
+  const v=edVid(), box=$('tlDotsWrap'); box.innerHTML='';
+  if(!selMedia||selMedia.tipo==='foto360'||!v.duration)return;
+  TAPPE.filter(t=>t.media_id===selMedia.id).forEach(t=>{
+    const d=document.createElement('div');
+    d.className='tlDot'+(selTappa&&selTappa.id===t.id?' on':'');
+    d.style.left=(t.t/v.duration*100)+'%';
+    d.title='tappa a '+fmt(t.t);
+    d.onclick=()=>selezionaTappa(t.id);
+    box.appendChild(d);
+  });
+}
+
+/* ---------------------------- TAPPE ---------------------------- */
+function renderTappe(){
+  const mie=TAPPE.filter(t=>!selMedia||t.media_id===selMedia.id);
+  $('tappeChips').innerHTML=mie.map((t,i)=>{
+    const n=HOTS.filter(h=>h.tappa_id===t.id).length;
+    return `<button class="chip${selTappa&&selTappa.id===t.id?' on':''}" onclick="selezionaTappa('${t.id}')">
+      ⏱ ${fmt(t.t)} <span class="x">· ${n} scoperte</span></button>`;
+  }).join('')||'<p class="hint">Nessuna tappa su questo media.</p>';
+  renderTlDots();
+}
+async function nuovaTappaQui(){
+  if(!selMedia){ toast('Seleziona prima un media'); return; }
+  const t=selMedia.tipo==='foto360'?0:Math.round(edVid().currentTime*10)/10;
+  edVid().pause();
+  const row={lezione_id:LEZ.id,media_id:selMedia.id,t,cocciu:'',ordine:TAPPE.length};
+  const {data,error}=await sb.from('edu_tappe').insert(row).select().single();
+  if(error){ toast('Errore: '+error.message); return; }
+  TAPPE.push(data); renderTappe(); selezionaTappa(data.id);
+  setPlacing(true);
+  toast('Tappa creata a '+fmt(t)+' — ora clicca nella scena per la scoperta');
+}
+function selezionaTappa(id){
+  selTappa=TAPPE.find(t=>t.id===id)||null; selHot=null; setPlacing(false);
+  if(!selTappa){ $('tappaForm').classList.add('hidden'); return; }
+  if(selMedia&&selTappa.media_id!==selMedia.id){ selMedia=MEDIA.find(m=>m.id===selTappa.media_id); caricaMediaNelViewer(); renderMedia(); }
+  const v=edVid(); if(selMedia&&selMedia.tipo!=='foto360'){ try{v.currentTime=Math.max(0,selTappa.t);}catch(e){} v.pause(); }
+  $('tappaForm').classList.remove('hidden');
+  $('tT').value=selTappa.t; $('tOrd').value=selTappa.ordine;
+  $('tCocciu').value=selTappa.cocciu||''; $('tCocciu2').value=selTappa.cocciu2||'';
+  $('hotForm').classList.add('hidden');
+  renderTappe(); renderHotList(); renderMarkers();
+}
+async function salvaTappa(){
+  const upd={t:num($('tT').value),ordine:parseInt($('tOrd').value||0,10),
+    cocciu:$('tCocciu').value,cocciu2:$('tCocciu2').value||null};
+  const {error}=await sb.from('edu_tappe').update(upd).eq('id',selTappa.id);
+  if(error){ toast('Errore: '+error.message); return; }
+  Object.assign(selTappa,upd); renderTappe(); toast('Tappa salvata');
+}
+async function eliminaTappa(){
+  if(!confirm('Eliminare la tappa e tutte le sue scoperte?'))return;
+  const {error}=await sb.from('edu_tappe').delete().eq('id',selTappa.id);
+  if(error){ toast('Errore: '+error.message); return; }
+  HOTS=HOTS.filter(h=>h.tappa_id!==selTappa.id);
+  TAPPE=TAPPE.filter(t=>t.id!==selTappa.id);
+  selTappa=null; $('tappaForm').classList.add('hidden');
+  renderTappe(); renderMarkers(); toast('Tappa eliminata');
+}
+
+/* --------------------------- HOTSPOT --------------------------- */
+function hotsDiTappa(){ return selTappa?HOTS.filter(h=>h.tappa_id===selTappa.id):[]; }
+function renderHotList(){
+  $('hotList').innerHTML=hotsDiTappa().map(h=>`
+    <div class="hotRow${selHot&&selHot.id===h.id?' on':''}" onclick="selezionaHot('${h.id}')" style="cursor:pointer">
+      <span>${esc(h.em)}</span><b>${esc(h.tit)||'(senza titolo)'}</b>
+      <span class="hint">yaw ${Math.round(h.yaw)} · pitch ${Math.round(h.pitch)}</span>
+      <span style="flex:1"></span>
+      <span class="val ${h.validazione==='validato'?'ok':'no'}">${h.validazione==='validato'?'VALIDATO':'DA VALIDARE'}</span>
+    </div>`).join('')||'<p class="hint">Nessuna scoperta: piazzane una con il click o col 🎯.</p>';
+}
+function selezionaHot(id){
+  selHot=HOTS.find(h=>h.id===id)||null; setPlacing(false);
+  if(!selHot){ $('hotForm').classList.add('hidden'); renderHotList(); renderMarkers(); return; }
+  $('hotForm').classList.remove('hidden');
+  $('hEm').value=selHot.em||'✨'; $('hYaw').value=selHot.yaw; $('hPitch').value=selHot.pitch;
+  $('hTit').value=selHot.tit||''; $('hTxt').value=selHot.txt||''; $('hTxt2').value=selHot.txt2||'';
+  $('hFoto').value=selHot.foto_url||''; $('hAudio').value=selHot.audio_url||'';
+  $('hVal').value=selHot.validazione; $('hValNome').value=selHot.validatore||'';
+  renderHotList(); renderMarkers();
+}
+async function creaHot(yaw,pitch){
+  const row={tappa_id:selTappa.id,yaw:Math.round(yaw),pitch:Math.round(pitch),
+    em:'✨',tit:'',txt:'',ordine:hotsDiTappa().length};
+  const {data,error}=await sb.from('edu_hotspot').insert(row).select().single();
+  if(error){ toast('Errore: '+error.message); return; }
+  HOTS.push(data); renderTappe(); selezionaHot(data.id);
+  toast('Scoperta piazzata: yaw '+row.yaw+' · pitch '+row.pitch);
+}
+async function salvaHot(){
+  const upd={em:$('hEm').value||'✨',yaw:num($('hYaw').value),pitch:num($('hPitch').value),
+    tit:$('hTit').value,txt:$('hTxt').value,txt2:$('hTxt2').value||null,
+    foto_url:$('hFoto').value||null,audio_url:$('hAudio').value||null,
+    validazione:$('hVal').value,validatore:$('hValNome').value||null,
+    validato_il:$('hVal').value==='validato'?new Date().toISOString():null};
+  const {error}=await sb.from('edu_hotspot').update(upd).eq('id',selHot.id);
+  if(error){ toast('Errore: '+error.message); return; }
+  Object.assign(selHot,upd); renderHotList(); renderMarkers(); renderTappe(); toast('Scoperta salvata');
+}
+async function eliminaHot(){
+  if(!confirm('Eliminare questa scoperta?'))return;
+  const {error}=await sb.from('edu_hotspot').delete().eq('id',selHot.id);
+  if(error){ toast('Errore: '+error.message); return; }
+  HOTS=HOTS.filter(h=>h.id!==selHot.id);
+  selHot=null; $('hotForm').classList.add('hidden');
+  renderHotList(); renderMarkers(); renderTappe(); toast('Scoperta eliminata');
+}
+
+/* --------------- piazzamento sul fotogramma (click, centro, drag) --------------- */
+function hotAlCentro(){
+  if(!selTappa){ toast('Seleziona prima una tappa'); return; }
+  creaHot(0,0);
+}
+function overlayUV(e){
+  const r=$('edOverlay').getBoundingClientRect();
+  return {u:Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)), v:Math.max(0,Math.min(1,(e.clientY-r.top)/r.height))};
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const ov=$('edOverlay');
+  ov.addEventListener('mousemove',(e)=>{
+    if(_dragHot)return;
+    const p=uvToYawPitch(overlayUV(e).u,overlayUV(e).v);
+    $('edHud').textContent='cursore → yaw '+Math.round(p.yaw)+' · pitch '+Math.round(p.pitch)+(placing?'  ·  clicca per piazzare':'');
+  });
+  ov.addEventListener('click',(e)=>{
+    if(e.target.closest('.mk'))return;
+    if(_dragMoved){ _dragMoved=false; return; }
+    if(!placing){ if(selTappa)toast('Per piazzare una scoperta attiva ➕ Piazzamento'); return; }
+    if(!selTappa)return;
+    const uv=overlayUV(e), p=uvToYawPitch(uv.u,uv.v);
+    console.log('[REGIA v13] pick yaw',Math.round(p.yaw),'pitch',Math.round(p.pitch));
+    setPlacing(false); creaHot(p.yaw,p.pitch);
+  });
+});
+/* marker: click = seleziona, trascina = sposta e salva */
+let _dragHot=null,_dragMoved=false,_dragStart=null;
+function renderMarkers(){
+  const ov=$('edOverlay'); while(ov.firstChild)ov.removeChild(ov.firstChild);
+  $('edOverlay').classList.toggle('noplace',!placing);
+  hotsDiTappa().forEach(h=>{
+    const uv=yawPitchToUV(num(h.yaw),num(h.pitch));
+    const m=document.createElement('div'); m.className='mk'+(selHot&&selHot.id===h.id?' on':''); m.dataset.id=h.id;
+    m.style.left=(uv.u*100)+'%'; m.style.top=(uv.v*100)+'%';
+    m.textContent=h.em||'?';
+    const lbl=document.createElement('small'); lbl.textContent=(h.tit||'senza titolo')+' · '+Math.round(h.yaw)+'/'+Math.round(h.pitch); m.appendChild(lbl);
+    m.addEventListener('mousedown',(e)=>{ e.preventDefault(); _dragHot=h; _dragMoved=false; _dragStart={x:e.clientX,y:e.clientY,el:m}; m.classList.add('drag'); });
+    m.addEventListener('click',(e)=>{ e.stopPropagation(); if(!_dragMoved)selezionaHot(h.id); _dragMoved=false; });
+    ov.appendChild(m);
+  });
+}
+document.addEventListener('mousemove',(e)=>{
+  if(!_dragHot)return;
+  if(Math.hypot(e.clientX-_dragStart.x,e.clientY-_dragStart.y)>4)_dragMoved=true;
+  if(!_dragMoved)return;
+  const uv=overlayUV(e); _dragStart.el.style.left=(uv.u*100)+'%'; _dragStart.el.style.top=(uv.v*100)+'%';
+  const p=uvToYawPitch(uv.u,uv.v); $('edHud').textContent='sposto "'+(_dragHot.tit||'scoperta')+'" → yaw '+Math.round(p.yaw)+' · pitch '+Math.round(p.pitch);
+});
+document.addEventListener('mouseup',async (e)=>{
+  if(!_dragHot)return;
+  const h=_dragHot, el=_dragStart.el; _dragHot=null; el.classList.remove('drag');
+  if(!_dragMoved)return;
+  const uv=overlayUV(e), p=uvToYawPitch(uv.u,uv.v);
+  const upd={yaw:Math.round(p.yaw),pitch:Math.round(p.pitch)};
+  const {error}=await sb.from('edu_hotspot').update(upd).eq('id',h.id);
+  if(error){ toast('Errore: '+error.message); renderMarkers(); return; }
+  Object.assign(h,upd); if(selHot&&selHot.id===h.id){ $('hYaw').value=upd.yaw; $('hPitch').value=upd.pitch; }
+  renderHotList(); renderMarkers(); toast('Scoperta spostata: yaw '+upd.yaw+' · pitch '+upd.pitch);
+  setTimeout(()=>{_dragMoved=false;},50);
+});
+function setPlacing(on){
+  placing=!!on;
+  $('placingBanner').style.display=placing?'block':'none';
+  $('edOverlay').classList.toggle('noplace',!placing);
+  const b=$('btnPlace'); if(b)b.classList.toggle('rosa',!placing);
+}
+function togglePlacing(){
+  if(!selTappa){ toast('Seleziona prima una tappa'); return; }
+  setPlacing(!placing);
+}
+
+/* ----------------------------- QUIZ ----------------------------- */
+function setQzLiv(l){
+  qzLiv=l;
+  $('qzJ').classList.toggle('on',l==='junior');
+  $('qzS').classList.toggle('on',l==='senior');
+  renderQuiz();
+}
+function renderQuiz(){
+  const mie=QUIZ.filter(q=>q.livello===qzLiv);
+  $('quizList').innerHTML=mie.map(q=>{
+    const opts=(q.opzioni||[]).map((o,i)=>`
+      <div class="optRow">
+        <input type="radio" name="ok_${q.id}" ${q.ok===i?'checked':''} onchange="qSetOk('${q.id}',${i})" title="risposta giusta">
+        <input value="${esc(o)}" onchange="qSetOpt('${q.id}',${i},this.value)">
+        <button class="btn danger mini" onclick="qDelOpt('${q.id}',${i})" ${q.opzioni.length<=2?'disabled':''}>✕</button>
+      </div>`).join('');
+    return `<div class="qCard">
+      <label>Domanda</label><input value="${esc(q.domanda)}" onchange="qSetDom('${q.id}',this.value)">
+      ${opts}
+      <label>💡 Lo sapevi? · spiegazione dopo la risposta (facoltativa)</label>
+      <textarea onchange="qSetSp('${q.id}',this.value)" placeholder="Es. La crosta è durissima: serve il palo a T per romperla…">${esc(q.spiegazione||'')}</textarea>
+      <label>Foto della spiegazione · URL https (facoltativa)</label>
+      <input value="${esc(q.media_spiegazione||'')}" onchange="qSetMed('${q.id}',this.value)" placeholder="https://…">
+      <label>🎬 Video di riferimento · per il Quiz Live a metà lezione</label>
+      <select onchange="qSetV('${q.id}',this.value)">${vOpts(q.v)}</select>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn mini" onclick="qAddOpt('${q.id}')" ${q.opzioni.length>=4?'disabled':''}>＋ opzione</button>
+        <span style="flex:1"></span>
+        <button class="btn oro mini" onclick="qSalva('${q.id}')">Salva</button>
+        <button class="btn danger mini" onclick="qElimina('${q.id}')">Elimina</button>
+      </div></div>`;
+  }).join('')||'<p class="hint">Nessuna domanda per questo livello.</p>';
+}
+function vOpts(v){
+  const vids=MEDIA.filter(m=>m.tipo!=='foto360');
+  return `<option value=""${v==null?' selected':''}>Domanda generale (solo quiz finale)</option>`+
+    vids.map((m,i)=>`<option value="${i}"${v===i?' selected':''}>Video ${i+1}</option>`).join('');
+}
+function qGet(id){ return QUIZ.find(q=>q.id===id); }
+function qSetSp(id,v2){ qGet(id).spiegazione=v2; }
+function qSetMed(id,v2){ qGet(id).media_spiegazione=v2.trim(); }
+function qSetV(id,v2){ qGet(id).v=(v2===''?null:parseInt(v2,10)); }
+function qSetDom(id,v){ qGet(id).domanda=v; }
+function qSetOpt(id,i,v){ qGet(id).opzioni[i]=v; }
+function qSetOk(id,i){ qGet(id).ok=i; }
+function qAddOpt(id){ qGet(id).opzioni.push(''); renderQuiz(); }
+function qDelOpt(id,i){ const q=qGet(id); q.opzioni.splice(i,1); if(q.ok>=q.opzioni.length)q.ok=0; renderQuiz(); }
+async function qSalva(id){
+  const q=qGet(id);
+  const med=(q.media_spiegazione||'').trim();
+  if(med && !/^https:\/\//i.test(med)){ toast('La foto della spiegazione deve essere un URL https'); return; }
+  const {error}=await sb.from('edu_quiz').update({domanda:q.domanda,opzioni:q.opzioni,ok:q.ok,
+    spiegazione:(q.spiegazione||'').trim()||null, media_spiegazione:med||null,
+    v:(q.v==null||q.v===''?null:q.v)}).eq('id',id);
+  if(error){ toast('Errore: '+error.message); return; }
+  toast('Domanda salvata');
+}
+async function qElimina(id){
+  if(!confirm('Eliminare la domanda?'))return;
+  const {error}=await sb.from('edu_quiz').delete().eq('id',id);
+  if(error){ toast('Errore: '+error.message); return; }
+  QUIZ=QUIZ.filter(q=>q.id!==id); renderQuiz(); toast('Domanda eliminata');
+}
+async function nuovaDomanda(){
+  const row={lezione_id:LEZ.id,livello:qzLiv,domanda:'Nuova domanda…',
+    opzioni:['Opzione A','Opzione B','Opzione C'],ok:0,
+    ordine:QUIZ.filter(q=>q.livello===qzLiv).length};
+  const {data,error}=await sb.from('edu_quiz').insert(row).select().single();
+  if(error){ toast('Errore: '+error.message); return; }
+  QUIZ.push(data); renderQuiz();
+}
+
+boot();
+</script>
+</body>
+</html>

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Esplora Trapani Edu — demo VR</title>
+<!-- ESPLORA TRAPANI EDU · demo VR per Meta Quest · v1.0 (23/09/2026)
+     Cartella autonoma: nessun servizio esterno tranne i video (CDN Bunny).
+     Requisiti WebXR: pagina servita in HTTPS (o localhost). -->
+<script src="lib/aframe.min.js"></script>
+<script src="lib/hls.min.js"></script>
+<script src="vr-logic.js"></script>
+<style>
+  :root{--rosa:#e8788a;--rosa2:#b8506a;--oro:#c9a15a;--sale:#faf7f2;--ink:#3a2e2a}
+  html,body{margin:0;height:100%;background:#0b0d10;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  /* LANDING: un solo gesto, poi si è dentro */
+  #landing{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse at 50% 40%,#2a1b22 0%,#0b0d10 70%);color:var(--sale);text-align:center;padding:24px}
+  #landing .k{letter-spacing:.18em;text-transform:uppercase;font-size:14px;color:var(--oro);font-weight:700}
+  #landing h1{font-size:clamp(28px,5vw,54px);margin:10px 0 6px;color:#fff}
+  #landing p{max-width:560px;opacity:.85;font-size:clamp(15px,2vw,19px);line-height:1.5;margin:0 0 30px}
+  #entra{font:inherit;font-weight:800;font-size:clamp(22px,3.4vw,34px);color:#fff;background:var(--rosa2);border:none;
+    border-radius:999px;padding:22px 54px;cursor:pointer;box-shadow:0 10px 40px rgba(232,120,138,.35);animation:pulse 2.2s infinite}
+  #entra:active{transform:scale(.97)}
+  @keyframes pulse{0%,100%{box-shadow:0 10px 40px rgba(232,120,138,.35)}50%{box-shadow:0 10px 60px rgba(232,120,138,.7)}}
+  #landing small{margin-top:22px;opacity:.55;font-size:13px}
+  #senzaVr{display:none;margin-top:14px;font-size:14px;opacity:.8}
+  #senzaVr button{font:inherit;background:none;border:1px solid var(--oro);color:var(--oro);border-radius:999px;padding:8px 16px;cursor:pointer}
+  #vers{position:fixed;bottom:6px;right:10px;font-size:11px;color:#777;z-index:11}
+  a-scene{position:fixed;inset:0}
+</style>
+</head>
+<body>
+
+<div id="landing">
+  <div class="k">Esplora Trapani Edu</div>
+  <h1 id="lTit">Antichi Mestieri di Trapani</h1>
+  <p>Indossa il visore. Ti troverai nelle saline e nelle botteghe di Trapani, a 360°: guarda intorno, punta i cerchi che brillano con il controller e scopri i segreti dei mestieri.</p>
+  <button id="entra">ENTRA ▸</button>
+  <small>Un solo tocco: parte il video e si entra in realtà virtuale.</small>
+  <div id="senzaVr">Questo browser non supporta la realtà virtuale. <button onclick="avvia(false)">Guarda in 360° sullo schermo</button></div>
+</div>
+<div id="vers">demo VR v1.2</div>
+
+<a-scene vr-mode-ui="enabled:false" renderer="colorManagement:true;antialias:true" loading-screen="dotsColor:#e8788a;backgroundColor:#0b0d10"
+         background="color:#0b0d10">
+  <a-assets>
+    <video id="vid" playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video>
+  </a-assets>
+
+  <a-videosphere id="vsky" rotation="0 -90 0" src="#vid" visible="false"></a-videosphere>
+  <a-sky id="skyMenu" color="#1a1216"></a-sky>
+
+  <!-- mani: laser sui controller del Quest -->
+  <a-entity id="manoS" laser-controls="hand:left"  raycaster="objects:.cl;far:40" line="color:#c9a15a;opacity:.75"></a-entity>
+  <a-entity id="manoD" laser-controls="hand:right" raycaster="objects:.cl;far:40" line="color:#e8788a;opacity:.85"></a-entity>
+
+  <a-entity id="rig" position="0 0 0">
+    <a-camera id="cam" wasd-controls-enabled="false" look-controls="pointerLockEnabled:false">
+      <!-- sguardo: serve senza controller (Cardboard, o schermo). Si spegne quando arriva un controller. -->
+      <a-cursor id="cursore" fuse="true" fuse-timeout="1600" raycaster="objects:.cl;far:40"
+                material="color:#e8788a;shader:flat;opacity:.9" geometry="primitive:ring;radiusInner:0.012;radiusOuter:0.02"
+                animation__fusing="property:scale;startEvents:fusing;from:1 1 1;to:0.2 0.2 0.2;dur:1600"
+                animation__reset="property:scale;startEvents:mouseleave;to:1 1 1;dur:150"></a-cursor>
+    </a-camera>
+  </a-entity>
+
+  <a-entity id="menu"></a-entity>
+  <a-entity id="hotspots"></a-entity>
+  <a-entity id="pannello"></a-entity>
+  <a-entity id="hud"></a-entity>
+</a-scene>
+
+<script>
+/* ---------- componenti ---------- */
+AFRAME.registerComponent('look-at-cam', {
+  tick: function () { const c = this.el.sceneEl.camera; if (c) this.el.object3D.lookAt(c.getWorldPosition(new THREE.Vector3())); }
+});
+AFRAME.registerComponent('pulsante', {   /* feedback visivo al puntamento */
+  init: function () {
+    const el = this.el;
+    el.addEventListener('mouseenter', () => el.setAttribute('material', 'color', '#e8788a'));
+    el.addEventListener('mouseleave', () => el.setAttribute('material', 'color', el.dataset.col || '#b8506a'));
+  }
+});
+
+/* ---------- stato ---------- */
+const VIDEO_LOCALI = false;                 /* true = usa i file in video/<guid>.mp4 (demo offline) */
+let DATI = null, LEZ = null, S = null, _hls = null, _timer = null, _pausaTappa = false;
+const vid = document.getElementById('vid');
+const scene = document.querySelector('a-scene');
+const $ = id => document.getElementById(id);
+const L = window.VRLogic;
+
+fetch('dati.json').then(r => r.json()).then(d => { DATI = d; $('lTit').textContent = d.titolo || 'Demo'; }).catch(() => { DATI = { titolo: 'Demo', cdn: '', lezioni: [] }; });
+
+/* WebXR disponibile? */
+(async () => {
+  const ok = navigator.xr && await navigator.xr.isSessionSupported('immersive-vr').catch(() => false);
+  if (!ok) $('senzaVr').style.display = 'block';
+})();
+$('entra').addEventListener('click', () => avvia(true));
+
+/* un solo gesto: sblocca l'audio/video e, se possibile, entra in VR */
+async function avvia(vr) {
+  if (!DATI) { await new Promise(r => setTimeout(r, 300)); if (!DATI) return; }
+  /* sblocco del video con il gesto reale: precarico la prima clip disponibile e la faccio
+     partire un istante (silenziata): da qui in poi il browser considera il video "attivato" */
+  try {
+    const prima = DATI.lezioni.find(l => !l.soon && l.video && l.video.length);
+    if (prima) { const v = L.sorgente(DATI.cdn, prima.video[0], VIDEO_LOCALI); vid.src = VIDEO_LOCALI ? v.mp4 : v.mp4hd; vid.load(); }
+    vid.muted = true; await vid.play().catch(() => {}); vid.pause(); vid.currentTime = 0; vid.muted = false;
+    DIAG.sbloccato = true;
+  } catch (e) { DIAG.sbloccato = false; }
+  $('landing').style.display = 'none';
+  if (vr) { try { await scene.enterVR(); } catch (e) { /* si resta in 360 su schermo */ } }
+  mostraMenu();
+}
+
+/* diagnostica dentro il visore: si accende con ?diag=1 nell'indirizzo */
+const DIAG = { err: '', sbloccato: null };
+const DIAG_ON = /[?&]diag=1/.test(location.search);
+function diagTesto() {
+  const m = document.getElementById('vsky').getObject3D('mesh'); const map = m && m.material && m.material.map;
+  return 'video: readyState ' + vid.readyState + ' · t=' + (vid.currentTime || 0).toFixed(1) + ' · ' + (vid.paused ? 'in pausa' : 'in riproduzione') +
+    ' · muto ' + vid.muted + ' · ' + vid.videoWidth + 'x' + vid.videoHeight +
+    '\nsorgente: ' + ((vid.currentSrc || vid.src || '-').split('/').slice(-2).join('/')) +
+    '\ntexture: ' + (map ? 'creata' : 'ASSENTE') + ' · sbloccato: ' + DIAG.sbloccato + ' · attivazione: ' + (navigator.userActivation ? navigator.userActivation.hasBeenActive : '?') +
+    (DIAG.err ? '\n' + DIAG.err : '');
+}
+if (DIAG_ON) setInterval(() => { if (LEZ) hudMsg(diagTesto()); }, 1000);
+vid.addEventListener('playing', () => {          /* la texture si aggiorna da sola, ma un colpo in più non guasta */
+  const m = document.getElementById('vsky').getObject3D('mesh');
+  if (m && m.material && m.material.map) m.material.map.needsUpdate = true;
+});
+/* controller arrivato → niente più "sguardo che clicca da solo" */
+scene.addEventListener('controllerconnected', () => { const c = $('cursore'); if (c) { c.setAttribute('fuse', 'false'); c.setAttribute('visible', 'false'); } });
+
+/* ---------- helper di costruzione ---------- */
+function svuota(id) { const e = $(id); while (e.firstChild) e.removeChild(e.firstChild); }
+function testo(v, opts) {
+  const t = document.createElement('a-text');
+  t.setAttribute('value', v); t.setAttribute('align', (opts && opts.align) || 'center');
+  t.setAttribute('color', (opts && opts.color) || '#3a2e2a'); t.setAttribute('width', (opts && opts.width) || 2.6);
+  t.setAttribute('position', (opts && opts.pos) || '0 0 0.01'); t.setAttribute('baseline', (opts && opts.baseline) || 'center');
+  if (opts && opts.font) t.setAttribute('font', opts.font);
+  return t;
+}
+function pannello(w, h, col) {
+  const p = document.createElement('a-plane');
+  p.setAttribute('width', w); p.setAttribute('height', h);
+  p.setAttribute('material', 'color:' + (col || '#faf7f2') + ';shader:flat;opacity:0.97');
+  return p;
+}
+function bottone(label, w, onClick, col) {
+  const b = document.createElement('a-plane');
+  b.classList.add('cl'); b.setAttribute('pulsante', ''); b.dataset.col = col || '#b8506a';
+  b.setAttribute('width', w || 1.2); b.setAttribute('height', 0.32);
+  b.setAttribute('material', 'color:' + (col || '#b8506a') + ';shader:flat');
+  b.appendChild(testo(label, { color: '#ffffff', width: (w || 1.2) * 1.9 }));
+  b.addEventListener('click', onClick);
+  return b;
+}
+function hudMsg(msg) {                       /* messaggio breve in basso davanti allo sguardo */
+  svuota('hud'); if (!msg) return;
+  const p = pannello(2.6, 0.42, '#1a1216'); p.setAttribute('position', '0 0.55 -2.8'); p.setAttribute('material', 'color:#1a1216;shader:flat;opacity:0.85');
+  p.appendChild(testo(L.spezza(msg, 60), { color: '#ffffff', width: 2.4 }));
+  $('hud').appendChild(p);
+}
+
+/* ---------- MENU ---------- */
+function mostraMenu() {
+  stopVideo(); svuota('hotspots'); svuota('pannello'); svuota('hud');
+  $('vsky').setAttribute('visible', 'false'); $('skyMenu').setAttribute('visible', 'true');
+  svuota('menu'); const m = $('menu');
+  const tit = pannello(3.4, 0.5, '#1a1216'); tit.setAttribute('position', '0 2.55 -3.2');
+  tit.appendChild(testo((DATI.titolo || '') + '\n' + (DATI.sotto || 'Scegli una lezione: punta e premi il grilletto'), { color: '#faf7f2', width: 3.2 }));
+  m.appendChild(tit);
+  const pos = L.arcoMenu(DATI.lezioni.length, 3.2, Math.min(120, 30 * DATI.lezioni.length));
+  DATI.lezioni.forEach((lz, i) => {
+    const card = document.createElement('a-plane');
+    const soon = !!lz.soon;                      /* lezione senza video proprio: si vede, non si apre */
+    if (!soon) { card.classList.add('cl'); card.setAttribute('pulsante', ''); }
+    card.dataset.col = soon ? '#5a4a50' : '#b8506a';
+    card.setAttribute('width', 1.25); card.setAttribute('height', 0.78);
+    card.setAttribute('material', 'color:' + (soon ? '#5a4a50' : '#b8506a') + ';shader:flat;opacity:' + (soon ? '0.7' : '1'));
+    card.setAttribute('position', pos[i].x + ' ' + pos[i].y + ' ' + pos[i].z);
+    card.setAttribute('rotation', '0 ' + pos[i].rotY + ' 0');
+    card.appendChild(testo(L.spezza(lz.tit, 22) + '\n' + (soon ? 'in arrivo' : L.spezza(lz.sub || '', 30) + (lz.durata ? '\n' + lz.durata : '')), { color: '#ffffff', width: 2.3 }));
+    if (!soon) card.addEventListener('click', () => avviaLezione(i));
+    m.appendChild(card);
+  });
+}
+
+/* ---------- LEZIONE ---------- */
+/* Strategia video (v1.2): mp4 diretto prima di tutto — è il percorso più semplice e
+   quello che il Browser del Quest gestisce meglio. 1080p, se non c'è 720p, e solo
+   alla fine HLS. Ogni fallimento viene spiegato nel visore, non ingoiato. */
+let _tentativi = [];
+function attach(guid) {
+  const v = L.sorgente(DATI.cdn, guid, VIDEO_LOCALI);
+  if (_hls) { try { _hls.destroy(); } catch (e) {} _hls = null; }
+  _tentativi = VIDEO_LOCALI ? [v.mp4] : [v.mp4hd, v.mp4].concat((window.Hls && Hls.isSupported()) ? ['hls:' + v.hls] : []);
+  prossimaSorgente();
+}
+function prossimaSorgente() {
+  const s = _tentativi.shift();
+  if (!s) { hudMsg('Video non raggiungibile. Controlla: dominio autorizzato su Bunny, HTTPS, Wi-Fi.'); return; }
+  if (s.startsWith('hls:')) {
+    _hls = new Hls({ maxBufferLength: 20 }); _hls.loadSource(s.slice(4)); _hls.attachMedia(vid);
+    _hls.on(Hls.Events.ERROR, (e, d) => { if (d && d.fatal) { try { _hls.destroy(); } catch (x) {} _hls = null; prossimaSorgente(); } });
+  } else { vid.src = s; vid.load(); }
+  vid.play().catch(err => { if (err && err.name === 'NotAllowedError') { vid.muted = true; vid.play().catch(() => {}); hudMsg('Audio bloccato dal browser: il video parte senza sonoro'); } });
+}
+vid.addEventListener('error', () => {           /* 403, CORS, formato: passo alla sorgente successiva */
+  const c = vid.error ? vid.error.code : 0;
+  DIAG.err = 'errore video codice ' + c + ' su ' + (vid.currentSrc || vid.src || '').split('/').slice(-2).join('/');
+  if (_tentativi.length) prossimaSorgente(); else hudMsg(DIAG.err + ' — codice 4 = file non raggiungibile (403/CORS)');
+});
+function stopVideo() { try { vid.pause(); } catch (e) {} if (_hls) { try { _hls.destroy(); } catch (e) {} _hls = null; } if (_timer) { clearInterval(_timer); _timer = null; } }
+
+function avviaLezione(i) {
+  LEZ = DATI.lezioni[i]; S = L.creaStato(LEZ);
+  svuota('menu'); $('skyMenu').setAttribute('visible', 'false'); $('vsky').setAttribute('visible', 'true');
+  hudMsg(LEZ.tit + ' — guardati intorno e cerca i cerchi che brillano');
+  setTimeout(() => hudMsg(''), 5000);
+  playClip();
+}
+function playClip() {
+  svuota('hotspots'); svuota('pannello'); _pausaTappa = false;
+  attach(LEZ.video[S.vidIdx]);
+  vid.muted = false;
+  if (_timer) clearInterval(_timer);
+  _timer = setInterval(tick, 250);
+}
+function tick() {
+  if (!LEZ || S.fase !== 'video' || _pausaTappa) return;
+  const c = L.tappaDaAprire(S, LEZ, vid.currentTime || 0);
+  if (c) apriTappa(c.i);
+}
+vid.addEventListener('ended', () => {
+  if (!LEZ || S.fase !== 'video') return;
+  const dopo = L.fineClip(S, LEZ);
+  if (dopo === 'video') playClip(); else if (dopo === 'quiz') mostraQuiz(); else mostraFine();
+});
+
+function apriTappa(i) {
+  _pausaTappa = true; vid.pause(); L.apriTappa(S, i);
+  const t = LEZ.tappe[i];
+  hudMsg(t.msg || 'Trova i punti che brillano!');
+  svuota('hotspots'); const g = $('hotspots');
+  t.hot.forEach((h, k) => {
+    const e = document.createElement('a-entity');
+    const p = L.posizione(h.yaw, h.pitch, 7);
+    e.setAttribute('position', p.x + ' ' + p.y + ' ' + p.z);
+    e.setAttribute('look-at-cam', '');
+    const ring = document.createElement('a-ring');
+    ring.setAttribute('radius-inner', 0.42); ring.setAttribute('radius-outer', 0.6);
+    ring.setAttribute('material', 'color:#e8788a;shader:flat;opacity:0.95');
+    ring.setAttribute('animation', 'property:scale;dir:alternate;dur:900;easing:easeInOutSine;loop:true;to:1.25 1.25 1.25');
+    const dot = document.createElement('a-circle'); dot.setAttribute('radius', 0.2); dot.setAttribute('material', 'color:#ffffff;shader:flat;opacity:0.9'); dot.setAttribute('position', '0 0 0.01');
+    /* BERSAGLIO del laser: un disco pieno e invisibile (raggio 0.7 m a 7 m ≈ 5° di tolleranza).
+       L'anello ha il centro vuoto: mirando al pallino bianco il raycaster non colpirebbe nulla. */
+    const hit = document.createElement('a-circle');
+    hit.classList.add('cl'); hit.setAttribute('radius', 0.7); hit.setAttribute('position', '0 0 -0.005');
+    hit.setAttribute('material', 'color:#ffffff;shader:flat;opacity:0;transparent:true;side:double');
+    hit.addEventListener('mouseenter', () => { ring.setAttribute('material', 'color', '#ffffff'); dot.setAttribute('material', 'color', '#e8788a'); });
+    hit.addEventListener('mouseleave', () => { ring.setAttribute('material', 'color', '#e8788a'); dot.setAttribute('material', 'color', '#ffffff'); });
+    hit.addEventListener('click', () => apriScheda(h, e));
+    e.appendChild(hit); e.appendChild(ring); e.appendChild(dot); g.appendChild(e);
+  });
+}
+function apriScheda(h, hotEl) {
+  hotEl.parentNode && hotEl.parentNode.removeChild(hotEl);
+  svuota('pannello'); const P = $('pannello');
+  const box = document.createElement('a-entity'); box.setAttribute('position', '0 1.6 -2.6'); box.setAttribute('look-at-cam', '');
+  const pan = pannello(3.0, 1.9, '#faf7f2'); box.appendChild(pan);
+  pan.appendChild(testo(L.spezza(h.tit, 32), { color: '#b8506a', width: 2.8, pos: '0 0.72 0.01' }));
+  pan.appendChild(testo(L.spezza(h.txt, 52), { color: '#3a2e2a', width: 2.7, pos: '0 0.05 0.01' }));
+  const ok = bottone('Ho capito!', 1.3, () => {
+    svuota('pannello');
+    if (L.hotspotLetto(S, LEZ)) { hudMsg('Scoperta fatta! Si riparte...'); setTimeout(() => hudMsg(''), 2500); svuota('hotspots'); _pausaTappa = false; vid.play().catch(() => {}); }
+    else hudMsg('Ce n\'e\' ancora qualcuno che brilla... trovalo!');
+  }, '#c9a15a');
+  ok.setAttribute('position', '0 -0.72 0.02'); pan.appendChild(ok);
+  P.appendChild(box);
+}
+
+/* ---------- QUIZ ---------- */
+function mostraQuiz() {
+  stopVideo(); svuota('hotspots'); svuota('pannello'); hudMsg('');
+  const q = LEZ.quiz[S.quizIdx]; const P = $('pannello');
+  const box = document.createElement('a-entity'); box.setAttribute('position', '0 1.6 -2.6'); box.setAttribute('look-at-cam', '');
+  const pan = pannello(3.2, 2.2, '#faf7f2'); box.appendChild(pan);
+  pan.appendChild(testo('Domanda ' + (S.quizIdx + 1) + ' di ' + LEZ.quiz.length, { color: '#c9a15a', width: 2.4, pos: '0 0.92 0.01' }));
+  pan.appendChild(testo(L.spezza(q.q, 44), { color: '#3a2e2a', width: 2.9, pos: '0 0.55 0.01' }));
+  const COL = ['#b8506a', '#c9a15a', '#4a7c59', '#3d5a80'];
+  q.opts.forEach((o, i) => {
+    const b = bottone(L.spezza(o, 36), 2.6, () => {
+      const r = L.rispondi(S, LEZ, i);
+      svuota('pannello');
+      const fb = document.createElement('a-entity'); fb.setAttribute('position', '0 1.6 -2.6'); fb.setAttribute('look-at-cam', '');
+      const pf = pannello(3.0, 1.2, r.giusta ? '#2f7a46' : '#b8506a'); fb.appendChild(pf);
+      pf.appendChild(testo(r.giusta ? 'Cristallo perfetto!' : 'Ops, sciolto!', { color: '#ffffff', width: 3.2, pos: '0 0.3 0.01' }));
+      pf.appendChild(testo(r.giusta ? 'Proprio cosi\': ' + L.spezza(r.corretta, 40) : 'La risposta giusta era: ' + L.spezza(r.corretta, 36) + '\nIl sale si ricristallizza sempre!', { color: '#ffffff', width: 2.6, pos: '0 -0.2 0.01' }));
+      P.appendChild(fb);
+      setTimeout(() => { if (r.fine) mostraFine(); else mostraQuiz(); }, 2600);
+    }, COL[i % COL.length]);
+    b.setAttribute('position', '0 ' + (0.15 - i * 0.36) + ' 0.02'); pan.appendChild(b);
+  });
+  P.appendChild(box);
+}
+function mostraFine() {
+  stopVideo(); svuota('hotspots'); svuota('pannello'); hudMsg('');
+  const P = $('pannello');
+  const box = document.createElement('a-entity'); box.setAttribute('position', '0 1.6 -2.6'); box.setAttribute('look-at-cam', '');
+  const pan = pannello(3.0, 1.7, '#faf7f2'); box.appendChild(pan);
+  const n = LEZ.quiz ? LEZ.quiz.length : 0;
+  pan.appendChild(testo('Lezione completata!', { color: '#b8506a', width: 3.2, pos: '0 0.55 0.01' }));
+  pan.appendChild(testo(n ? (S.punti + ' risposte giuste su ' + n) : 'Bravi!', { color: '#3a2e2a', width: 2.6, pos: '0 0.15 0.01' }));
+  const b = bottone('Torna alle lezioni', 1.8, () => mostraMenu(), '#c9a15a'); b.setAttribute('position', '0 -0.45 0.02'); pan.appendChild(b);
+  P.appendChild(box);
+}
+
+/* uscita dalla VR: torna alla landing per il prossimo visitatore */
+scene.addEventListener('exit-vr', () => { stopVideo(); $('landing').style.display = 'flex'; });
+</script>
+</body>
+</html>

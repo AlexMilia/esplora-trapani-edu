@@ -1,0 +1,642 @@
+{
+ "titolo": "Antichi Mestieri di Trapani",
+ "sotto": "Esplora Trapani Edu · demo VR",
+ "cdn": "https://vz-bedaaab5-085.b-cdn.net/",
+ "lezioni": [
+  {
+   "id": "salinaio",
+   "tit": "Il mestiere del salinaio",
+   "sub": "La raccolta del sale, raccontata da chi la fa davvero",
+   "durata": "~10 minuti",
+   "video": [
+    "5b4d7a42-8985-4cd8-8f24-31f40815c786",
+    "0c310d07-b174-4e13-bacf-841ca5e0db13",
+    "40dbd428-5294-436a-9001-b42a731e1734"
+   ],
+   "tappe": [
+    {
+     "v": 0,
+     "t": 41,
+     "msg": "Fermi tutti! Mattia ha appena mostrato i suoi due attrezzi… Trovate il punto che brilla!",
+     "hot": [
+      {
+       "yaw": 40,
+       "pitch": -15,
+       "tit": "U palu e u paluneddo",
+       "txt": "Li avete sentiti da Mattia? Il PALO ha la forma di una T ed è di acciaio inossidabile: in salina qualsiasi altro metallo si arrugginirebbe subito! Il PALUNEDDO invece è la pala tradizionale, con una forma studiata apposta per accogliere più sale possibile. Nomi siciliani per attrezzi antichi!"
+      }
+     ]
+    },
+    {
+     "v": 0,
+     "t": 68,
+     "msg": "Guardate Mattia al lavoro! Cosa sta rompendo con il palo? Toccate il punto!",
+     "hot": [
+      {
+       "yaw": -20,
+       "pitch": -20,
+       "tit": "La crosta di sale",
+       "txt": "Il sale nella vasca non è morbido: diventa una crosta durissima, quasi solida, che la pala da sola non può raccogliere! Per questo Mattia spinge il palo in profondità e lo RUOTA: rompe la lastra, e solo dopo può raccogliere il sale per formare i munzeddi."
+      }
+     ]
+    },
+    {
+     "v": 0,
+     "t": 136,
+     "msg": "Ultima scoperta di questa parte: cosa si nasconde SOTTO il sale? Trovatelo!",
+     "hot": [
+      {
+       "yaw": 0,
+       "pitch": -30,
+       "tit": "Il segreto dell'argilla",
+       "txt": "Sotto la lastra di sale, il fondo delle vasche è fatto di ARGILLA, livellata con grande cura: se non fosse perfettamente piana, lo strato di sale verrebbe irregolare. Per questo Mattia scava solo in superficie, senza mai toccarla: l'argilla non deve mischiarsi col sale. Un lavoro di precisione!"
+      }
+     ]
+    },
+    {
+     "v": 1,
+     "t": 9,
+     "msg": "Avete sentito il trucco di Mattia? Trovate il punto che brilla!",
+     "hot": [
+      {
+       "yaw": 20,
+       "pitch": -15,
+       "tit": "La prova della pala bianca",
+       "txt": "Il controllo di qualità del salinaio non ha bisogno di laboratori: basta guardare la PALA. Se la punta resta bianca, Mattia ha raccolto solo sale puro; se si sporca di scuro, ha toccato l'argilla. Uno strumento di lavoro che è anche lo strumento di controllo: semplice e geniale!"
+      }
+     ]
+    },
+    {
+     "v": 2,
+     "t": 15,
+     "msg": "Eccoli! Guardatevi intorno: cosa sono queste montagnette bianche? Toccatene una!",
+     "hot": [
+      {
+       "yaw": 0,
+       "pitch": -10,
+       "tit": "Il munzeddu",
+       "txt": "In siciliano si chiama MUNZEDDU: il sale appena raccolto si getta in cima al munzeddu più vicino. L'avete sentito da Mattia? Servono a far DRENARE l'acqua: il sale sgocciola e comincia ad asciugarsi. Poi l'asciugatura vera, sul bordo della vasca, durerà MESI!"
+      }
+     ]
+    },
+    {
+     "v": 2,
+     "t": 40,
+     "msg": "Ultimo mistero: come si protegge una montagna di sale dalla pioggia? Trovate il punto!",
+     "hot": [
+      {
+       "yaw": -60,
+       "pitch": 0,
+       "tit": "Ieri le tegole, oggi la crosta",
+       "txt": "Anticamente le montagne di sale si coprivano con le TEGOLE di terracotta — e qualcuna coperta così si vede ancora! Oggi invece, come racconta Mattia, non si copre più: sulla montagna si forma una CROSTA naturale di sale che fa scivolare la pioggia e ferma polvere e vento. Il sale esterno protegge quello interno: la montagna si difende da sola!"
+      }
+     ]
+    }
+   ],
+   "quiz": [
+    {
+     "q": "Come si chiama la pala tradizionale di Mattia?",
+     "opts": [
+      "U paluneddo",
+      "U cucchiarune",
+      "La palettona"
+     ],
+     "ok": 0
+    },
+    {
+     "q": "A cosa serve il palo con la forma a T?",
+     "opts": [
+      "A misurare l'acqua",
+      "A rompere la crosta di sale",
+      "A piantare l'ombrellone"
+     ],
+     "ok": 1
+    },
+    {
+     "q": "Cosa c'è sul fondo delle vasche, sotto il sale?",
+     "opts": [
+      "Cemento",
+      "Sabbia",
+      "Argilla"
+     ],
+     "ok": 2
+    },
+    {
+     "q": "Come capisce Mattia di aver raccolto solo sale puro?",
+     "opts": [
+      "La punta della pala resta bianca",
+      "Il sale profuma di più",
+      "La pala diventa pesante"
+     ],
+     "ok": 0
+    }
+   ],
+   "soon": false
+  },
+  {
+   "id": "corallo",
+   "tit": "La lavorazione del corallo",
+   "sub": "Il corallo rosso di Trapani: dalla pesca con l'ingegno alle botteghe dei maestri corallari. (video provvisorio)",
+   "durata": "~4 min",
+   "video": [
+    "5b4d7a42-8985-4cd8-8f24-31f40815c786"
+   ],
+   "tappe": [
+    {
+     "v": 0,
+     "t": 20,
+     "msg": "Da dove viene il corallo?",
+     "hot": [
+      {
+       "yaw": -18,
+       "pitch": -4,
+       "tit": "Un animale, non una pianta",
+       "txt": "Il corallo rosso è una colonia di piccolissimi animali, i polipi, che costruiscono uno scheletro duro e rosso. Vive in profondità, sui fondali rocciosi del Mediterraneo."
+      },
+      {
+       "yaw": 18,
+       "pitch": 6,
+       "tit": "L'ingegno",
+       "txt": "Anticamente si pescava con l'\"ingegno\": una croce di legno con reti trascinata sul fondo. Oggi è vietato: il corallo si raccoglie solo con subacquei autorizzati, per proteggerlo."
+      }
+     ]
+    },
+    {
+     "v": 0,
+     "t": 60,
+     "msg": "La bottega del corallaro.",
+     "hot": [
+      {
+       "yaw": -18,
+       "pitch": -4,
+       "tit": "Tagliare e forare",
+       "txt": "Il ramo grezzo si pulisce, si taglia in pezzetti e si fora con punte finissime. Una volta si usava l'archetto a mano, oggi piccoli trapani."
+      },
+      {
+       "yaw": 18,
+       "pitch": 6,
+       "tit": "La lucidatura",
+       "txt": "I pezzi si lucidano strofinandoli a lungo finché diventano lisci e brillanti. Poi si infilano in collane o si montano su oro e argento."
+      }
+     ]
+    },
+    {
+     "v": 0,
+     "t": 110,
+     "msg": "Un tesoro da museo.",
+     "hot": [
+      {
+       "yaw": -18,
+       "pitch": -4,
+       "tit": "I capolavori trapanesi",
+       "txt": "Tra il '500 e il '700 Trapani era famosa per presepi, cornici e oggetti sacri in corallo, oro e smalto. Molti si vedono oggi al Museo Pepoli."
+      }
+     ]
+    }
+   ],
+   "quiz": [
+    {
+     "q": "Il corallo rosso è…",
+     "opts": [
+      "Una pianta marina",
+      "Una roccia colorata",
+      "Una colonia di piccoli animali"
+     ],
+     "ok": 2
+    },
+    {
+     "q": "Come si chiamava l'attrezzo antico per pescare il corallo?",
+     "opts": [
+      "L'ingegno",
+      "La nassa",
+      "Il palo"
+     ],
+     "ok": 0
+    },
+    {
+     "q": "Cosa fa il corallaro per rendere i pezzi brillanti?",
+     "opts": [
+      "Li dipinge",
+      "Li lucida a lungo",
+      "Li bagna nel sale"
+     ],
+     "ok": 1
+    },
+    {
+     "q": "Dove si possono vedere i capolavori trapanesi in corallo?",
+     "opts": [
+      "Al Museo Pepoli",
+      "Alla salina",
+      "In spiaggia"
+     ],
+     "ok": 0
+    }
+   ],
+   "soon": true
+  },
+  {
+   "id": "marmo",
+   "tit": "La lavorazione del marmo",
+   "sub": "Le cave di Custonaci e il Perlato di Sicilia: dalla montagna alla pietra lucida. (video provvisorio)",
+   "durata": "~4 min",
+   "video": [
+    "5b4d7a42-8985-4cd8-8f24-31f40815c786"
+   ],
+   "tappe": [
+    {
+     "v": 0,
+     "t": 20,
+     "msg": "La montagna di pietra.",
+     "hot": [
+      {
+       "yaw": -18,
+       "pitch": -4,
+       "tit": "Il Perlato di Sicilia",
+       "txt": "Il marmo di Custonaci si chiama \"Perlato di Sicilia\": è color avorio con piccole macchie, i fossili di conchiglie antichissime. È nato sul fondo del mare milioni di anni fa."
+      },
+      {
+       "yaw": 18,
+       "pitch": 6,
+       "tit": "Il filo diamantato",
+       "txt": "Una volta i blocchi si staccavano con cunei e mazze. Oggi si usa il filo diamantato, un cavo d'acciaio con perline di diamante che taglia la roccia come un filo nel formaggio."
+      }
+     ]
+    },
+    {
+     "v": 0,
+     "t": 60,
+     "msg": "Dal blocco alla lastra.",
+     "hot": [
+      {
+       "yaw": -18,
+       "pitch": -4,
+       "tit": "Il telaio",
+       "txt": "I blocchi, grandi come un furgone, vanno in segheria: il telaio con molte lame li taglia in lastre sottili, raffreddando con acqua."
+      },
+      {
+       "yaw": 18,
+       "pitch": 6,
+       "tit": "La lucidatura",
+       "txt": "Le lastre si lucidano con mole sempre più fini fino a diventare specchi. Così diventano pavimenti, scale e facciate di palazzi in tutto il mondo."
+      }
+     ]
+    },
+    {
+     "v": 0,
+     "t": 110,
+     "msg": "Un mestiere di famiglia.",
+     "hot": [
+      {
+       "yaw": -18,
+       "pitch": -4,
+       "tit": "Lo scalpellino",
+       "txt": "Lo scalpellino lavora il marmo a mano con scalpello e mazzuolo per fare colonne, fontane e decorazioni. È un sapere che passa di padre in figlio."
+      }
+     ]
+    }
+   ],
+   "quiz": [
+    {
+     "q": "Come si chiama il marmo di Custonaci?",
+     "opts": [
+      "Perlato di Sicilia",
+      "Bianco di Carrara",
+      "Rosso Trapani"
+     ],
+     "ok": 0
+    },
+    {
+     "q": "Le macchioline nel Perlato sono…",
+     "opts": [
+      "Gocce di vernice",
+      "Fossili di conchiglie",
+      "Granelli di sale"
+     ],
+     "ok": 1
+    },
+    {
+     "q": "Con cosa si tagliano oggi i blocchi in cava?",
+     "opts": [
+      "Filo diamantato",
+      "Sega a mano",
+      "Laser"
+     ],
+     "ok": 0
+    },
+    {
+     "q": "Chi lavora il marmo a mano con scalpello e mazzuolo?",
+     "opts": [
+      "Il salinaio",
+      "Il corallaro",
+      "Lo scalpellino"
+     ],
+     "ok": 2
+    }
+   ],
+   "soon": true
+  },
+  {
+   "id": "tappeti-erice",
+   "tit": "I tappeti di Erice",
+   "sub": "Le frazzate: tappeti tessuti al telaio con stoffe riciclate, nel borgo medievale. (video provvisorio)",
+   "durata": "~4 min",
+   "video": [
+    "5b4d7a42-8985-4cd8-8f24-31f40815c786"
+   ],
+   "tappe": [
+    {
+     "v": 0,
+     "t": 20,
+     "msg": "Cos'è una frazzata?",
+     "hot": [
+      {
+       "yaw": -18,
+       "pitch": -4,
+       "tit": "La frazzata",
+       "txt": "La frazzata è il tappeto tradizionale di Erice. Si tesse con strisce di stoffa avanzata da vecchi vestiti e lenzuola: un riciclo antico, molto prima che si parlasse di ecologia!"
+      },
+      {
+       "yaw": 18,
+       "pitch": 6,
+       "tit": "I colori",
+       "txt": "Le strisce colorate formano righe e disegni geometrici: rombi, zig-zag, croci. Ogni tessitrice ha i suoi motivi."
+      }
+     ]
+    },
+    {
+     "v": 0,
+     "t": 60,
+     "msg": "Il telaio di legno.",
+     "hot": [
+      {
+       "yaw": -18,
+       "pitch": -4,
+       "tit": "Il telaio a mano",
+       "txt": "Il telaio è una grande macchina di legno. I fili di cotone tesi si chiamano ordito; le strisce di stoffa che si infilano di traverso sono la trama."
+      },
+      {
+       "yaw": 18,
+       "pitch": 6,
+       "tit": "Pedali e navetta",
+       "txt": "Con i pedali la tessitrice alza e abbassa i fili, e con la navetta fa passare la striscia. Poi batte forte con il pettine per stringere il tessuto."
+      }
+     ]
+    },
+    {
+     "v": 0,
+     "t": 110,
+     "msg": "Un sapere da custodire.",
+     "hot": [
+      {
+       "yaw": -18,
+       "pitch": -4,
+       "tit": "Le botteghe di Erice",
+       "txt": "Nelle viuzze di pietra di Erice ci sono ancora botteghe dove si tesse a mano. Oggi le frazzate sono anche coperte, borse e arazzi."
+      }
+     ]
+    }
+   ],
+   "quiz": [
+    {
+     "q": "Con cosa si tesse la frazzata?",
+     "opts": [
+      "Lana di pecora",
+      "Strisce di stoffa riciclata",
+      "Fili d'oro"
+     ],
+     "ok": 1
+    },
+    {
+     "q": "Come si chiamano i fili tesi sul telaio?",
+     "opts": [
+      "Ordito",
+      "Trama",
+      "Navetta"
+     ],
+     "ok": 0
+    },
+    {
+     "q": "A cosa serve il pettine del telaio?",
+     "opts": [
+      "A pettinare la lana",
+      "A stringere il tessuto",
+      "A tagliare i fili"
+     ],
+     "ok": 1
+    },
+    {
+     "q": "I disegni della frazzata sono soprattutto…",
+     "opts": [
+      "Fiori",
+      "Animali",
+      "Forme geometriche"
+     ],
+     "ok": 2
+    }
+   ],
+   "soon": true
+  },
+  {
+   "id": "vendemmia",
+   "tit": "La vendemmia",
+   "sub": "Dall'uva al mosto: la raccolta tra i vigneti della provincia più vitata d'Italia. (video provvisorio)",
+   "durata": "~4 min",
+   "video": [
+    "5b4d7a42-8985-4cd8-8f24-31f40815c786"
+   ],
+   "tappe": [
+    {
+     "v": 0,
+     "t": 20,
+     "msg": "Quando si raccoglie?",
+     "hot": [
+      {
+       "yaw": -18,
+       "pitch": -4,
+       "tit": "Il momento giusto",
+       "txt": "L'uva si raccoglie tra agosto e ottobre, quando è matura: si assaggia, si guarda il colore e si misura lo zucchero. Spesso si inizia all'alba, col fresco."
+      },
+      {
+       "yaw": 18,
+       "pitch": 6,
+       "tit": "I vitigni di casa",
+       "txt": "Qui crescono uve antiche siciliane come Grillo, Catarratto, Zibibbo e Nero d'Avola. Dal Grillo nasce anche il Marsala."
+      }
+     ]
+    },
+    {
+     "v": 0,
+     "t": 60,
+     "msg": "Forbici e cassette.",
+     "hot": [
+      {
+       "yaw": -18,
+       "pitch": -4,
+       "tit": "La raccolta a mano",
+       "txt": "I grappoli si tagliano con le forbici e si posano nelle cassette, senza schiacciarli. Una volta si usavano i cesti di canna e il \"cufinu\"."
+      },
+      {
+       "yaw": 18,
+       "pitch": 6,
+       "tit": "Verso la cantina",
+       "txt": "Le cassette viaggiano subito in cantina: l'uva deve arrivare fresca e intera."
+      }
+     ]
+    },
+    {
+     "v": 0,
+     "t": 110,
+     "msg": "Il mosto!",
+     "hot": [
+      {
+       "yaw": -18,
+       "pitch": -4,
+       "tit": "La pigiatura",
+       "txt": "In cantina l'uva si pigia e diventa mosto, il succo dolce. Anticamente si pigiava con i piedi nel \"palmento\" di pietra. Poi il mosto fermenta: lo zucchero si trasforma e nasce il vino."
+      }
+     ]
+    }
+   ],
+   "quiz": [
+    {
+     "q": "In che stagione si fa la vendemmia?",
+     "opts": [
+      "In primavera",
+      "Tra fine estate e autunno",
+      "In inverno"
+     ],
+     "ok": 1
+    },
+    {
+     "q": "Quale di queste è un'uva tipica trapanese?",
+     "opts": [
+      "Grillo",
+      "Chianti",
+      "Prosecco"
+     ],
+     "ok": 0
+    },
+    {
+     "q": "Come si chiama il succo d'uva appena pigiato?",
+     "opts": [
+      "Mosto",
+      "Aceto",
+      "Olio"
+     ],
+     "ok": 0
+    },
+    {
+     "q": "Dove si pigiava l'uva anticamente?",
+     "opts": [
+      "Nel munzeddu",
+      "Nel palmento",
+      "Nel telaio"
+     ],
+     "ok": 1
+    }
+   ],
+   "soon": true
+  },
+  {
+   "id": "olive",
+   "tit": "La raccolta delle olive",
+   "sub": "Dagli ulivi secolari al frantoio: come nasce l'olio della Valle del Belìce. (video provvisorio)",
+   "durata": "~4 min",
+   "video": [
+    "5b4d7a42-8985-4cd8-8f24-31f40815c786"
+   ],
+   "tappe": [
+    {
+     "v": 0,
+     "t": 20,
+     "msg": "Le reti sotto l'albero.",
+     "hot": [
+      {
+       "yaw": -18,
+       "pitch": -4,
+       "tit": "Le reti",
+       "txt": "Prima di tutto si stendono le reti sotto l'albero, così le olive che cadono non si sporcano e si raccolgono in fretta."
+      },
+      {
+       "yaw": 18,
+       "pitch": 6,
+       "tit": "La Nocellara del Belìce",
+       "txt": "Qui cresce la Nocellara del Belìce, un'oliva grossa e verde, buona sia da mangiare che per l'olio. È tutelata con la DOP."
+      }
+     ]
+    },
+    {
+     "v": 0,
+     "t": 60,
+     "msg": "Come si staccano?",
+     "hot": [
+      {
+       "yaw": -18,
+       "pitch": -4,
+       "tit": "La brucatura",
+       "txt": "Il modo più antico è la brucatura: si staccano le olive a mano o con piccoli rastrelli, ramo per ramo. Oggi si usano anche abbacchiatori elettrici che fanno vibrare i rami."
+      },
+      {
+       "yaw": 18,
+       "pitch": 6,
+       "tit": "Nelle cassette",
+       "txt": "Le olive si mettono in cassette forate, mai in sacchi chiusi: devono respirare e andare al frantoio entro poche ore."
+      }
+     ]
+    },
+    {
+     "v": 0,
+     "t": 110,
+     "msg": "Al frantoio!",
+     "hot": [
+      {
+       "yaw": -18,
+       "pitch": -4,
+       "tit": "Dalla pasta all'olio",
+       "txt": "Al frantoio le olive si lavano e si macinano: diventano una pasta. La pasta si gramola e si separa: da una parte l'olio verde e profumato, dall'altra acqua e sansa. Una volta si macinava con grandi ruote di pietra."
+      }
+     ]
+    }
+   ],
+   "quiz": [
+    {
+     "q": "Cosa si stende sotto l'ulivo prima della raccolta?",
+     "opts": [
+      "Le reti",
+      "I tappeti",
+      "La paglia"
+     ],
+     "ok": 0
+    },
+    {
+     "q": "Come si chiama l'oliva tipica della Valle del Belìce?",
+     "opts": [
+      "Taggiasca",
+      "Nocellara",
+      "Leccino"
+     ],
+     "ok": 1
+    },
+    {
+     "q": "La brucatura è…",
+     "opts": [
+      "La raccolta a mano",
+      "La spremitura",
+      "La potatura"
+     ],
+     "ok": 0
+    },
+    {
+     "q": "Cosa si ottiene macinando le olive al frantoio?",
+     "opts": [
+      "Il mosto",
+      "Una pasta da cui esce l'olio",
+      "Il sale"
+     ],
+     "ok": 1
+    }
+   ],
+   "soon": true
+  }
+ ]
+}

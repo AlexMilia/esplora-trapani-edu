@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prova video — demo VR</title>
+<script src="lib/aframe.min.js"></script>
+<style>
+  body{margin:0;font-family:system-ui,sans-serif;background:#0b0d10;color:#faf7f2;padding:16px}
+  h1{font-size:22px;color:#e8788a;margin:0 0 6px}
+  .r{background:#1a1216;border-radius:12px;padding:12px 14px;margin:10px 0;font-size:17px;line-height:1.5}
+  .ok{color:#7ddc9a}.ko{color:#ff8fa3}.att{color:#c9a15a}
+  video{width:100%;max-width:520px;border-radius:12px;background:#000;display:block;margin-top:8px}
+  a-scene{width:100%;max-width:520px;height:260px;display:block;border-radius:12px;overflow:hidden;position:relative}
+  button{font:inherit;font-size:20px;font-weight:800;background:#b8506a;color:#fff;border:none;border-radius:999px;padding:14px 28px;margin:8px 0}
+  small{opacity:.6}
+</style>
+</head>
+<body>
+<h1>Prova video della demo VR</h1>
+<small>Apri questa pagina nel Browser del Quest (in 2D), premi il tasto e leggi i risultati. Poi mandami uno screenshot.</small><br>
+<button id="go">Avvia la prova ▸</button>
+<div class="r" id="r0">Pagina: <span id="p0">…</span></div>
+<div class="r" id="r1">1. File mp4 sul CDN (fetch con CORS): <span id="p1">in attesa</span></div>
+<div class="r" id="r2">2. Riproduzione in un &lt;video&gt; normale: <span id="p2">in attesa</span><video id="v2" playsinline crossorigin="anonymous" muted></video></div>
+<div class="r" id="r3">3. Stesso video dentro la sfera A-Frame: <span id="p3">in attesa</span>
+  <a-scene embedded vr-mode-ui="enabled:false" background="color:#222">
+    <a-assets><video id="v3" playsinline crossorigin="anonymous" muted loop></video></a-assets>
+    <a-videosphere src="#v3" rotation="0 -90 0"></a-videosphere>
+    <a-camera look-controls></a-camera>
+  </a-scene>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+$('p0').innerHTML=(location.protocol==='https:'?'<span class="ok">HTTPS ✓</span>':'<span class="ko">NON HTTPS ✗ (WebXR non parte)</span>')+' · dominio <b>'+location.host+'</b> · '+(navigator.userAgent.match(/OculusBrowser\/[\d.]+/)||['browser non Meta'])[0];
+$('go').onclick=async()=>{
+  const d=await fetch('dati.json').then(r=>r.json());
+  const lz=d.lezioni.find(l=>!l.soon)||d.lezioni[0]; const g=lz.video[0];
+  const url=d.cdn+g+'/play_720p.mp4';
+  /* 1: fetch con CORS — dice subito se è 403 (referrer non autorizzato) o senza header CORS */
+  try{ const r=await fetch(url,{method:'HEAD',mode:'cors'});
+    $('p1').innerHTML=r.ok?'<span class="ok">HTTP '+r.status+' ✓ — CORS ok</span>':'<span class="ko">HTTP '+r.status+' ✗ — '+(r.status===403?'dominio NON autorizzato su Bunny (Allowed referrers) o token':'errore server')+'</span>';
+  }catch(e){ $('p1').innerHTML='<span class="ko">bloccato ✗ — '+e.message+' (manca l\'header CORS o rete assente)</span>'; }
+  /* 2: video normale */
+  const v2=$('v2'); v2.src=url;
+  v2.onplaying=()=>$('p2').innerHTML='<span class="ok">parte ✓ '+v2.videoWidth+'x'+v2.videoHeight+'</span>';
+  v2.onerror=()=>$('p2').innerHTML='<span class="ko">errore codice '+(v2.error?v2.error.code:'?')+' ✗ (4 = file non raggiungibile)</span>';
+  v2.play().catch(e=>$('p2').innerHTML='<span class="ko">play rifiutato ✗ '+e.name+'</span>');
+  /* 3: videosfera */
+  const v3=$('v3'); v3.src=url;
+  v3.onplaying=()=>{ setTimeout(()=>{ const m=document.querySelector('a-videosphere').getObject3D('mesh'); const ok=m&&m.material&&m.material.map;
+    $('p3').innerHTML=ok?'<span class="ok">texture creata ✓ — se la sfera qui sopra è NERA con il video 2 che gira = problema CORS/WebGL</span>':'<span class="ko">texture assente ✗</span>'; },1500); };
+  v3.onerror=()=>$('p3').innerHTML='<span class="ko">errore codice '+(v3.error?v3.error.code:'?')+' ✗</span>';
+  v3.play().catch(e=>$('p3').innerHTML='<span class="ko">play rifiutato ✗ '+e.name+'</span>');
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+/* ===================== STRIPE (Fase 2 · abbonamenti) =====================
+   Chiavi da Stripe → Developers → API keys. Usa prima le chiavi di TEST (sk_test_…),
+   poi quelle live. La chiave SERVICE di Supabase (Settings → API → service_role)
+   serve SOLO a stripe.php e al webhook: non esce mai da questo file (dati/ è negata dal web). */
+$STRIPE_SECRET         = '';            /* sk_test_… / sk_live_… */
+$STRIPE_WEBHOOK_SECRET = '';            /* whsec_… (Developers → Webhooks → endpoint → Signing secret) */
+$SUPA_SERVICE          = '';            /* eyJ… service_role (Supabase → Settings → API) */
+$STRIPE_GIORNI_FATTURA = 7;             /* giorni per pagare la fattura ricevuta via email */
+/* ID dei prezzi creati su Stripe (li stampa stripe-setup.php): piano → periodo → price_… */
+$STRIPE_PRICES = [
+  'base'    => ['mese' => '', 'anno' => ''],
+  'pro'     => ['mese' => '', 'anno' => ''],
+  'premium' => ['mese' => '', 'anno' => ''],
+];

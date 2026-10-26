@@ -1,0 +1,31 @@
+# ---- SEGRETI: il config reale vive SOLO sul server (app/dati/) ----
+app/dati/config.php
+*.env
+.env*
+
+# ---- file generati a runtime da api.php / live.php (mai in repo) ----
+app/dati/cache_*.json
+app/dati/rl/
+app/dati/live/*.json
+app/dati/log.txt
+
+# ---- test ----
+node_modules/
+package-lock.json
+/tmp/
+test/*.log
+
+# ---- media pesanti: vivono su Bunny Stream / Backblaze B2, qui solo link ----
+demo-vr/video/*
+!demo-vr/video/.gitkeep
+*.mp4
+*.m4a
+*.mp3
+*.ogg
+
+# ---- sistema / editor ----
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

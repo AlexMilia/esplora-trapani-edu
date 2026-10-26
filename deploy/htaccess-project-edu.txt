@@ -1,0 +1,19 @@
+# =============================================================
+# /project/edu/.htaccess — Esplora Trapani Edu · percorsi tenant
+# /project/edu/{cliente}/qualsiasi  →  /project/edu/app/qualsiasi?c=cliente
+# Le cartelle e i file che ESISTONO davvero (app/, mestieri/, verN/…)
+# non vengono toccati: il rewrite scatta solo per i percorsi "virtuali".
+# =============================================================
+RewriteEngine On
+RewriteBase /project/edu/
+# /project/edu/salina-culcasi  →  /project/edu/salina-culcasi/  (la barra finale serve:
+# senza, il browser cerca api.php e live-lim.js un livello più su)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-z0-9][a-z0-9-]{1,40})$ $1/ [R=301,L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-z0-9][a-z0-9-]{1,40})/$ app/index.php?c=$1 [QSA,L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-z0-9][a-z0-9-]{1,40})/(.+)$ app/$2?c=$1 [QSA,L]
