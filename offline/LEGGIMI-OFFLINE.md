@@ -1,6 +1,6 @@
 # Pacchetto OFFLINE — il player in classe senza connessione
 
-(v1 · 29/10/2026 · player v2.4)
+(v1.1 · 29/10/2026 · player v2.4.1)
 
 A scuola può mancare la linea, o un accordo può chiedere che nulla passi da internet.
 Il pacchetto offline è una **cartella autonoma** (chiavetta USB o portatile) con il player 360,
@@ -57,6 +57,7 @@ da `file://`. Serve sempre il piccolo server locale di `AVVIA`.
 | sottotitoli `captions/it.vtt` da Bunny | `video/<guid>.it.vtt` se scaricati |
 | A-Frame e hls.js dal CDN | `lib/` locale (gli stessi file di `demo-vr/lib`) |
 | mascotte YouTube | solo se salvata come `video/yt_<id>.mp4`, altrimenti il player la salta |
+| «?» delle scoperte con `<a-text>` (font dal CDN di A-Frame) | «?» disegnato su canvas (v2.4.1): nessuna richiesta esterna |
 | Quiz live con i telefoni, tracking anonimo | non disponibili (serve il server) |
 | licenza del cliente controllata a ogni apertura | il pacchetto è una fotografia: va rigenerato per aggiornarlo |
 

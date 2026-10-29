@@ -1,5 +1,23 @@
 # Registro delle modifiche
 
+## 29/10/2026 (sera) — player v2.4.1: il «?» delle scoperte anche senza rete
+
+- **Trovato provando il pacchetto offline in Chromium con la rete bloccata**: il «?» dentro il cerchio delle
+  scoperte era un `<a-text>`, e A-Frame scarica il suo font da `cdn.aframe.io`: senza rete il cerchio
+  compariva vuoto (unica richiesta verso internet rimasta nel pacchetto). Ora, in modalità OFFLINE, il «?»
+  è disegnato su un canvas e usato come texture di un `a-plane` (`segnoInterrogativo()`, una PNG per colore,
+  nero in modalità Ipovedenti). Online non cambia nulla. `test/t_offline.js` lo verifica (26 verifiche).
+- Rigenerati `offline/player/index.html` e gli script del pacchetto `esplora-trapani` (`--da-dati`).
+- Verifiche fatte: `npm test` 15 suite / 0 errori; player offline servito da `avvia.js` (porta 8765) in
+  Chromium headless con le richieste esterne bloccate: menu, vendemmia (9 capitoli, 27 scoperte nell'indice
+  ☰), telecomando, PagGiù, →, scoperta aperta con il «?» visibile, zero richieste esterne.
+- **Non verificato**: la riproduzione dei video. Da questo ambiente il CDN di Bunny
+  (`vz-bedaaab5-085.b-cdn.net`) non è raggiungibile (policy di rete, non il 403 del referer), quindi
+  `scarica-video.sh` non ha potuto scaricare i 24 mp4. Da un PC normale lo script funziona com'è.
+- Segnalazione: `https://www.alessandromilia.it/project/esplora/mascotte.png` (immagine della mascotte
+  di `$BRAND`, usata anche dal player online) risponde **404**: il player ripiega sull'emoji 🧭, e nel
+  pacchetto offline `media/mascotte.png` resta vuoto. Va ricaricata sul server o cambiato l'URL nel config.
+
 ## 29/10/2026 — player v2.4: telecomando, pacchetto offline, vendemmia ritrovata
 
 ### Perché mancava la vendemmia

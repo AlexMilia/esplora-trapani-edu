@@ -9,6 +9,8 @@
    v2.4 (29/10/2026): telecomando per chi presenta (capitoli, ±10 s, lezione
    prec./succ., tasto unico «avanti» per i clicker) + modalità OFFLINE
    (pacchetto locale: offline/LEGGIMI-OFFLINE.md).
+   v2.4.1 (29/10/2026): offline il «?» delle scoperte è un canvas, non un
+   <a-text> (il font di A-Frame arriva dal CDN e senza rete non compariva).
    ===================================================================== */
 session_start();
 /* host canonico: Aruba fa 301 non-www -> www e il preflight CORS di
@@ -1194,6 +1196,18 @@ vid.addEventListener('ended',()=>{
 });
 
 let tappaAttiva=null;
+const _segni={};
+function segnoInterrogativo(col){
+  /* PNG (data URL) con un «?» grande e sfondo trasparente, una volta per colore */
+  if(_segni[col])return _segni[col];
+  const c=document.createElement('canvas');c.width=256;c.height=256;
+  const x=c.getContext&&c.getContext('2d');
+  if(!x)return _segni[col]='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';   /* senza canvas 2D (test): pixel trasparente */
+  x.clearRect(0,0,256,256);
+  x.fillStyle=col;x.font='bold 200px Arial, Helvetica, sans-serif';x.textAlign='center';x.textBaseline='middle';
+  x.fillText('?',128,140);
+  return _segni[col]=c.toDataURL('image/png');
+}
 function apriTappa(t){
   tappaAttiva=t; t._done=true;
   vid.pause(); updPausaBtn(); audioDuck(true);
@@ -1220,9 +1234,20 @@ function apriTappa(t){
     disc.setAttribute('material','color:#ffffff;shader:flat;opacity:0.92');
     disc.classList.add('hot');disc.dataset.h=i;
     e.appendChild(disc);
-    const tx=document.createElement('a-text');
-    tx.setAttribute('value','?');tx.setAttribute('align','center');tx.setAttribute('baseline','center');
-    tx.setAttribute('color',ACC==='ipo'?'#111111':'#e8788a');tx.setAttribute('width',9*K);tx.setAttribute('position','0 0 0.02');
+    const colTx=ACC==='ipo'?'#111111':'#e8788a';
+    let tx;
+    if(OFFLINE){
+      /* offline: niente <a-text> (il suo font arriva dal CDN di A-Frame e senza rete il «?» non compare):
+         il punto interrogativo viene disegnato su un canvas e usato come texture di un piano */
+      tx=document.createElement('a-plane');
+      tx.setAttribute('width',0.62*K);tx.setAttribute('height',0.62*K);
+      tx.setAttribute('material',{src:segnoInterrogativo(colTx),shader:'flat',transparent:true,opacity:1});
+    }else{
+      tx=document.createElement('a-text');
+      tx.setAttribute('value','?');tx.setAttribute('align','center');tx.setAttribute('baseline','center');
+      tx.setAttribute('color',colTx);tx.setAttribute('width',9*K);
+    }
+    tx.setAttribute('position','0 0 0.02');
     e.appendChild(tx);
     g.appendChild(e);
   });

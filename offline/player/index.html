@@ -336,8 +336,8 @@
 </head>
 <body>
 <script>
-window.EDU_T = "80aeaf78c33ed533325cf513b6f21d4785c20b85e0c4a71a";
-window.EDU_K = "5bc18dea63507724853d8bf084dad50a16899abacbb14feb52bfa5173e10e065";
+window.EDU_T = "1454f6b86dc6433f9886250becc17b18d14d1e9e45d522fa";
+window.EDU_K = "f6ac2ab31fd11dc77d705d5889c0cb7077b2cefafb393fe004fdb32c1186c92f";
 window.EDU_C = "esplora-trapani";   /* tenant (cliente) */
 window.EDU_BASE = ".\/";   /* cartella app/ (percorsi assoluti: funziona con o senza barra finale) */
 </script>
@@ -1122,6 +1122,18 @@ vid.addEventListener('ended',()=>{
 });
 
 let tappaAttiva=null;
+const _segni={};
+function segnoInterrogativo(col){
+  /* PNG (data URL) con un «?» grande e sfondo trasparente, una volta per colore */
+  if(_segni[col])return _segni[col];
+  const c=document.createElement('canvas');c.width=256;c.height=256;
+  const x=c.getContext&&c.getContext('2d');
+  if(!x)return _segni[col]='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';   /* senza canvas 2D (test): pixel trasparente */
+  x.clearRect(0,0,256,256);
+  x.fillStyle=col;x.font='bold 200px Arial, Helvetica, sans-serif';x.textAlign='center';x.textBaseline='middle';
+  x.fillText('?',128,140);
+  return _segni[col]=c.toDataURL('image/png');
+}
 function apriTappa(t){
   tappaAttiva=t; t._done=true;
   vid.pause(); updPausaBtn(); audioDuck(true);
@@ -1148,9 +1160,20 @@ function apriTappa(t){
     disc.setAttribute('material','color:#ffffff;shader:flat;opacity:0.92');
     disc.classList.add('hot');disc.dataset.h=i;
     e.appendChild(disc);
-    const tx=document.createElement('a-text');
-    tx.setAttribute('value','?');tx.setAttribute('align','center');tx.setAttribute('baseline','center');
-    tx.setAttribute('color',ACC==='ipo'?'#111111':'#e8788a');tx.setAttribute('width',9*K);tx.setAttribute('position','0 0 0.02');
+    const colTx=ACC==='ipo'?'#111111':'#e8788a';
+    let tx;
+    if(OFFLINE){
+      /* offline: niente <a-text> (il suo font arriva dal CDN di A-Frame e senza rete il «?» non compare):
+         il punto interrogativo viene disegnato su un canvas e usato come texture di un piano */
+      tx=document.createElement('a-plane');
+      tx.setAttribute('width',0.62*K);tx.setAttribute('height',0.62*K);
+      tx.setAttribute('material',{src:segnoInterrogativo(colTx),shader:'flat',transparent:true,opacity:1});
+    }else{
+      tx=document.createElement('a-text');
+      tx.setAttribute('value','?');tx.setAttribute('align','center');tx.setAttribute('baseline','center');
+      tx.setAttribute('color',colTx);tx.setAttribute('width',9*K);
+    }
+    tx.setAttribute('position','0 0 0.02');
     e.appendChild(tx);
     g.appendChild(e);
   });

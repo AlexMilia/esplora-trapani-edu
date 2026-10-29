@@ -50,6 +50,12 @@ const g = expr => window.eval(expr);   /* let/const di primo livello non stanno 
   ok('ancora nessuna fetch (lezione e tracking non passano dalla rete)', window.__fetch === 0);
   ok('pulsante quiz live nascosto', document.getElementById('tbLive').style.display === 'none');
   ok('telecomando visibile', document.getElementById('remote').classList.contains('on'));
+  /* v2.4.1: il «?» delle scoperte non è un <a-text> (font dal CDN di A-Frame) ma un piano con texture canvas */
+  window.apriTappa(g('LEZ').tappe[0]); await attendi(50);
+  ok('scoperta aperta: il «?» è un a-plane, nessun a-text (niente font dal CDN)',
+    document.querySelectorAll('#hotspots a-plane').length === 1 && document.querySelectorAll('#hotspots a-text').length === 0);
+  ok('il segno «?» è una data URL PNG', /^data:image\/png;base64,/.test(window.segnoInterrogativo('#e8788a')));
+  window.chiudiScoperta && window.chiudiScoperta();
   console.log('— 3. Mascotte YouTube offline: si salta senza bloccare —');
   /* in jsdom il <video> non carica nulla: simulo l'errore 404 che nel browser arriva dal server locale */
   const prova = async (src) => { const pr = window.playCoccio(src); await attendi(50);
