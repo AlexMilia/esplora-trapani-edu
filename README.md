@@ -67,7 +67,7 @@ Senza il `config.php` reale (chiavi Supabase) il player si apre ma il menu resta
 | Migrazione 29 (RLS consolidata) | ❌ da applicare | Fase 1 audit |
 | Migrazione 30 (abbonamenti) + Stripe | ❌ da attivare | Fase 2, passi in `docs/LEGGIMI-FASE2-STRIPE.md` (prima chiavi di test) |
 | Migrazione 31 (elenco clienti per il catalogo) | ❌ da applicare | insieme a regia v17.1 (vedi `docs/CHANGELOG.md`) |
-| Migrazione 32 (titolo dei capitoli) | ❌ da applicare | insieme a player v2.4 + regia v17.2 (29/10, vedi `docs/CHANGELOG.md`) |
+| Migrazione 32 (titolo dei capitoli) | ✅ dal 29/10 | applicata da Claude via MCP Supabase (`edu_32_capitoli`); player v2.4 + regia v17.2 ancora da caricare via FTP |
 | `app/` (api v5, player v2.3, regia v16.2) | ✅ dal 23/09 | player v2.4 (telecomando + offline), regia v17.2 + stripe*.php ancora da caricare |
 | Lezione `vendemmia-alagna` | stato **soon** dal 29/10 | era in bozza (per questo mancava); video da rimontare: `docs/VENDEMMIA-RIMONTAGGIO.md` |
 

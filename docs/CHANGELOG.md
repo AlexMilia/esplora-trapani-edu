@@ -24,7 +24,7 @@ La lezione `vendemmia-alagna` (9 clip, 27 scoperte, quiz 6+6) era in stato **boz
 ### Migrazione 32 + regia v17.2 — titolo dei capitoli
 `edu_media.titolo` esposto come `video[].tit` da `edu_assembla_lezione`; campo 📑 nella playlist della
 regia (`salvaCapitolo`). Seed dei titoli per vendemmia, corallo, tappeti e salinaio.
-**Da applicare in produzione** insieme a regia v17.2 e player v2.4; poi cancellare `dati/cache_*.json`.
+**Applicata in produzione il 29/10** (via MCP Supabase, nome `edu_32_capitoli`); regia v17.2 e player v2.4 vanno caricati via FTP, poi cancellare `dati/cache_*.json`. Cancellata anche la tappa vuota del salinaio (clip 1, 105,2 s) con il suo hotspot «✨».
 
 ### Pacchetto OFFLINE (`offline/`, vedi `offline/LEGGIMI-OFFLINE.md`)
 - `index.php` renderizzato con `EDU_OFFLINE=1` diventa statico: librerie da `lib/`, contenuti da `dati.js`
@@ -35,8 +35,8 @@ regia (`salvaCapitolo`). Seed dei titoli per vendemmia, corallo, tappeti e salin
   per includere una lezione in bozza via token di anteprima; `--res 1080p`) · `avvia.js` server locale
   con Range (salti nei video) + `AVVIA.bat`/`avvia.sh` · script `scarica-video.sh/.bat` generati.
 - Pacchetto `esplora-trapani` già versionato (`dati.js`: salinaio, corallo, tappeti, **vendemmia**).
-- La tappa vuota del salinaio (clip 1, 1:45, scheda «✨» senza testo) non è stata copiata nel pacchetto:
-  va cancellata in regia.
+- La tappa vuota del salinaio (clip 1, 1:45, scheda «✨» senza testo) non è nel pacchetto ed è stata
+  cancellata dal database il 29/10.
 
 ### Test
 - Nuove suite jsdom `test/t_telecomando.js` (40 verifiche) e `test/t_offline.js` (24), in `npm test`.
