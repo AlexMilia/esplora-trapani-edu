@@ -6,6 +6,9 @@
    e vengono consegnati da api.php (token di sessione + risposta cifrata
    AES). Chi salva questa pagina si porta via solo il motore.
    Pattern: progetto Odissea/mareandmore (agosto 2026).
+   v2.4 (29/10/2026): telecomando per chi presenta (capitoli, ±10 s, lezione
+   prec./succ., tasto unico «avanti» per i clicker) + modalità OFFLINE
+   (pacchetto locale: offline/LEGGIMI-OFFLINE.md).
    ===================================================================== */
 session_start();
 /* host canonico: Aruba fa 301 non-www -> www e il preflight CORS di
@@ -43,6 +46,12 @@ $BRAND = array_merge(array(
   'congedo'     => 'Adesso… andate a vedere dal vivo gli artigiani di Trapani!<br>Vi aspettano nelle loro botteghe 🛠️',
   'ko'          => '💧 Ops… non era questa! Ma ogni artigiano ha sbagliato mille volte prima di diventare maestro: riprovate!',
 ), isset($EDU_BRAND) && is_array($EDU_BRAND) ? $EDU_BRAND : array());
+/* ---- OFFLINE (pacchetto locale per le scuole senza rete, v2.4) ----
+   Il player viene renderizzato UNA volta con EDU_OFFLINE=1 (offline/costruisci-player.sh)
+   e diventa un index.html statico: librerie in lib/, contenuti in dati.js,
+   video in video/<guid>.mp4. Nessuna chiamata ad api.php né a Bunny. */
+$EDU_OFFLINE = (getenv('EDU_OFFLINE') === '1');
+if($EDU_OFFLINE){ $BRAND['mascotte_img'] = 'media/mascotte.png'; }
 $B = function($k){ global $BRAND; return htmlspecialchars($BRAND[$k], ENT_QUOTES, 'UTF-8'); };
 if(!isset($_SESSION['edu_t'])){ $_SESSION['edu_t'] = bin2hex(random_bytes(24)); }
 if(!isset($_SESSION['edu_k'])){ $_SESSION['edu_k'] = bin2hex(random_bytes(32)); }
@@ -60,11 +69,18 @@ edu_log('view', isset($_SERVER['QUERY_STRING']) ? $_SERVER['QUERY_STRING'] : '')
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <link rel="icon" href="<?php echo $B('mascotte_img'); ?>">
 <title><?php echo $B('titolo'); ?> — Lezioni</title>
+<?php if($EDU_OFFLINE): ?>
+<script>window.EDU_OFFLINE=true;</script>
+<script src="dati.js"></script>
+<script src="lib/aframe.min.js"></script>
+<script src="lib/hls.min.js"></script>
+<?php else: ?>
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<?php endif; ?>
 <style>
   /* --rosaTxt: variante scura del rosa per TESTO su fondo chiaro (contrasto WCAG AA) */
   :root{--rosa:#e8788a;--rosaTxt:#b8506a;--oro:#c9a15a;--ink:#3a2e2a;--sale:#faf7f2;--blu:#2e6e8e;--verde:#5a8a5a}
@@ -265,8 +281,61 @@ edu_log('view', isset($_SERVER['QUERY_STRING']) ? $_SERVER['QUERY_STRING'] : '')
     padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));
     background:linear-gradient(0deg,rgba(11,13,16,.85),rgba(11,13,16,0))}
   #seek{flex:1;accent-color:var(--rosa);height:28px;cursor:pointer}
+  #seekWrap{flex:1;position:relative;display:flex;align-items:center}
+  #seekWrap #seek{width:100%}
+  #seekMarks{position:absolute;left:8px;right:8px;top:50%;height:0;pointer-events:none}
+  #seekMarks i{position:absolute;top:-5px;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:#fff;border:2px solid var(--rosaTxt);box-sizing:border-box}
+  #seekMarks i.done{background:var(--rosaTxt)}
   #seekbar span{color:#fff;font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
   #seekClip{opacity:.7}
+
+  /* ---------- TELECOMANDO (v2.4): comandi grandi per chi guida la lezione ----------
+     Pensato per chi non è pratico: pulsanti grandi con l'etichetta sotto, un solo
+     tasto per andare avanti (PagGiù / clicker), play-pausa in evidenza. */
+  #remote{display:none;position:fixed;left:50%;transform:translateX(-50%);z-index:39;
+    bottom:calc(50px + env(safe-area-inset-bottom,0px));gap:6px;padding:8px 10px;max-width:96vw;
+    background:rgba(17,21,27,.93);border:1px solid rgba(255,255,255,.22);border-radius:22px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45);align-items:stretch}
+  #remote.on{display:flex}
+  #remote button{border:0;background:rgba(255,255,255,.08);color:#fff;border-radius:14px;min-width:66px;min-height:60px;
+    padding:6px 10px;font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:3px;line-height:1}
+  #remote button:hover{background:rgba(255,255,255,.18)}
+  #remote button:disabled{opacity:.35;cursor:default}
+  #remote button .ic{font-size:22px}
+  #remote button small{font-size:11px;opacity:.9;white-space:nowrap}
+  #remote button.play{background:var(--rosa);min-width:88px}
+  #remote button.play .ic{font-size:30px}
+  #remote .sep{width:1px;background:rgba(255,255,255,.18);margin:6px 2px}
+  body.remote-on .cocciu{bottom:142px}
+  body.remote-on.cc-on .cocciu{bottom:calc(214px + env(safe-area-inset-bottom,0px))}
+  body.remote-on #ccBox{bottom:calc(142px + env(safe-area-inset-bottom,0px))}
+  body.remote-on #lisBox{bottom:142px}
+  body.ipo #remote{background:#111;border:3px solid #fff}
+  body.ipo #remote button{min-height:76px;min-width:80px;border:2px solid #fff;background:#111}
+  body.ipo #remote button small{font-size:16px}
+  body.ipo #remote button.play{background:#fff;color:#111}
+  @media(max-width:900px){ #remote button small{display:none} #remote button{min-width:48px;min-height:50px;padding:6px}
+    #remote button.play{min-width:62px} #remote .sep{display:none} #remote{gap:4px;padding:6px 8px} }
+  /* indice dei capitoli */
+  #capitoli .card{text-align:left}
+  .capItem{display:flex;gap:12px;align-items:center;margin-top:10px;background:#fff;border-radius:14px;padding:12px 14px;
+    box-shadow:0 3px 10px rgba(58,46,42,.08);width:100%;border:2px solid transparent;cursor:pointer;font-family:inherit;text-align:left}
+  .capItem.on{border-color:var(--rosaTxt);background:#fff6f8}
+  .capItem .n{font-weight:800;color:var(--rosaTxt);min-width:34px;font-size:18px}
+  .capItem h3{font-size:16px;color:var(--ink)}
+  .capItem p{font-size:13px;opacity:.75;margin-top:2px;color:var(--ink)}
+  .capTappa{display:block;width:100%;text-align:left;border:0;background:transparent;font-family:inherit;cursor:pointer;
+    padding:6px 10px 6px 58px;font-size:14px;color:var(--ink);opacity:.85}
+  .capTappa:hover{opacity:1;text-decoration:underline}
+  body.ipo .capItem h3{font-size:28px} body.ipo .capItem p,body.ipo .capTappa{font-size:22px}
+  /* aiuto per chi presenta */
+  #aiuto .card{text-align:left}
+  #aiuto table{width:100%;border-collapse:collapse;margin-top:12px;font-size:15px}
+  #aiuto td{padding:8px 6px;border-bottom:1px solid #eadfce;vertical-align:top;color:var(--ink)}
+  #aiuto kbd{display:inline-block;background:#fff;border:1px solid #cbbfae;border-bottom-width:3px;border-radius:6px;
+    padding:3px 9px;font-family:inherit;font-weight:700;font-size:14px;margin-right:4px;white-space:nowrap}
+  body.ipo #aiuto td{font-size:24px} body.ipo #aiuto kbd{font-size:22px}
 
   /* X di chiusura sulle card */
   .card{position:relative}
@@ -342,7 +411,7 @@ edu_log('view', isset($_SERVER['QUERY_STRING']) ? $_SERVER['QUERY_STRING'] : '')
 window.EDU_T = <?php echo json_encode($_SESSION['edu_t']); ?>;
 window.EDU_K = <?php echo json_encode($_SESSION['edu_k']); ?>;
 window.EDU_C = <?php echo json_encode($EDU_C); ?>;   /* tenant (cliente) */
-window.EDU_BASE = <?php echo json_encode(rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/'), '/') . '/'); ?>;   /* cartella app/ (percorsi assoluti: funziona con o senza barra finale) */
+window.EDU_BASE = <?php echo json_encode($EDU_OFFLINE ? './' : rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/'), '/') . '/'); ?>;   /* cartella app/ (percorsi assoluti: funziona con o senza barra finale) */
 </script>
 
 <div class="teachbar">
@@ -354,6 +423,7 @@ window.EDU_BASE = <?php echo json_encode(rtrim(dirname($_SERVER['SCRIPT_NAME'] ?
   <button class="tbtn" id="btnDSA" onclick="toggleDSA()" aria-label="Alta leggibilità" title="Alta leggibilità">Aa</button>
   <button class="tbtn" id="btnCC" onclick="toggleCCMenu()" aria-label="Sottotitoli">CC</button>
   <button class="tbtn" id="tbLive" style="display:none" onclick="quizLive()" aria-label="Quiz live con i dispositivi degli alunni" title="Quiz live: PIN sui dispositivi degli alunni">🎮<span class="lbl"> Quiz live</span></button>
+  <button class="tbtn" id="btnRemote" onclick="toggleRemote()" aria-label="Telecomando" title="Mostra o nascondi il telecomando (tasto T)">🎛</button>
   <button class="tbtn" onclick="vaiMenu()" aria-label="Tutte le lezioni">☰<span class="lbl"> Lezioni</span></button>
 </div>
 
@@ -437,6 +507,7 @@ window.EDU_BASE = <?php echo json_encode(rtrim(dirname($_SERVER['SCRIPT_NAME'] ?
     <h1>Bravissimi!</h1>
     <p id="fineTxt"></p>
     <p style="font-weight:700;color:var(--rosa)"><?php echo $BRAND['congedo']; ?></p>
+    <button class="bigbtn oro" id="fineNext" style="display:none" onclick="lezioneSuccessiva()">⏭ Lezione successiva</button>
     <button class="bigbtn" onclick="vaiMenu()">☰ Torna alle lezioni</button>
   </div>
 </div>
@@ -496,8 +567,60 @@ window.EDU_BASE = <?php echo json_encode(rtrim(dirname($_SERVER['SCRIPT_NAME'] ?
 
 <div id="seekbar">
   <span id="seekClip"></span>
-  <input id="seek" type="range" aria-label="Posizione nel video" min="0" max="1000" value="0">
+  <span id="seekWrap"><input id="seek" type="range" aria-label="Posizione nel video" min="0" max="1000" value="0"><span id="seekMarks" aria-hidden="true"></span></span>
   <span id="seekTime">00:00 / --:--</span>
+</div>
+
+<!-- TELECOMANDO (v2.4): per chi guida la presentazione con mouse, touch o clicker.
+     Un solo gesto per andare avanti: il tasto PagGiù (quello dei telecomandi da
+     presentazione) chiude la scheda, apre la scoperta, passa al capitolo. -->
+<div id="remote" role="toolbar" aria-label="Telecomando della lezione">
+  <button id="rmLezPrev" onclick="lezionePrecedente()" title="Lezione precedente"><span class="ic">⏮</span><small>Lezione</small></button>
+  <button id="rmCapPrev" onclick="capitoloPrecedente()" title="Capitolo precedente (PagSu)"><span class="ic">⏪</span><small>Capitolo</small></button>
+  <span class="sep"></span>
+  <button id="rmBack" onclick="salta(-10)" title="Indietro di 10 secondi (freccia ←)"><span class="ic">↺</span><small>−10 s</small></button>
+  <button id="rmPlay" class="play" onclick="togglePausa()" title="Play / Pausa (Spazio)"><span class="ic">⏸</span><small>Pausa</small></button>
+  <button id="rmFwd" onclick="salta(10)" title="Avanti di 10 secondi (freccia →)"><span class="ic">↻</span><small>+10 s</small></button>
+  <span class="sep"></span>
+  <button id="rmCapNext" onclick="capitoloSuccessivo()" title="Capitolo successivo (PagGiù)"><span class="ic">⏩</span><small>Capitolo</small></button>
+  <button id="rmLezNext" onclick="lezioneSuccessiva()" title="Lezione successiva"><span class="ic">⏭</span><small>Lezione</small></button>
+  <span class="sep"></span>
+  <button id="rmCaps" onclick="apriCapitoli()" title="Indice dei capitoli (tasto C)"><span class="ic">☰</span><small>Capitoli</small></button>
+  <button id="rmHelp" onclick="apriAiuto()" title="Come si guida la lezione (tasto ?)"><span class="ic">?</span><small>Aiuto</small></button>
+</div>
+
+<!-- overlay: indice dei capitoli della lezione -->
+<div class="ovl" id="capitoli">
+  <div class="card">
+    <button class="closex" onclick="chiudiCapitoli()" aria-label="Chiudi">✕</button>
+    <h1>☰ I <em>capitoli</em> della lezione</h1>
+    <p style="text-align:left">Tocca un capitolo per andarci subito. Sotto ogni capitolo ci sono le sue scoperte: toccane una per rivederla.</p>
+    <div id="capBody"></div>
+    <div style="text-align:center"><button class="bigbtn oro" onclick="chiudiCapitoli()">Torna alla lezione</button></div>
+  </div>
+</div>
+
+<!-- overlay: aiuto per chi presenta -->
+<div class="ovl" id="aiuto">
+  <div class="card">
+    <button class="closex" onclick="chiudiAiuto()" aria-label="Chiudi">✕</button>
+    <h1>🎛 Come si <em>guida</em> la lezione</h1>
+    <p style="text-align:left">Si fa tutto con i pulsanti grandi in basso. Se avete un telecomando da presentazione (clicker), basta il tasto <b>avanti</b>: fa sempre la cosa giusta.</p>
+    <table>
+      <tr><td><kbd>PagGiù</kbd> <kbd>Invio</kbd></td><td><b>Avanti</b>: chiude la scheda, apre la scoperta che brilla, passa al capitolo successivo. È il tasto del clicker.</td></tr>
+      <tr><td><kbd>PagSu</kbd></td><td><b>Indietro</b>: torna all'inizio del capitolo (o al capitolo precedente).</td></tr>
+      <tr><td><kbd>Spazio</kbd></td><td>Pausa / riprendi il video.</td></tr>
+      <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Indietro / avanti di 10 secondi.</td></tr>
+      <tr><td><kbd>C</kbd></td><td>Indice dei capitoli (per saltare a un punto preciso).</td></tr>
+      <tr><td><kbd>N</kbd></td><td>Prossima scoperta (apre la scheda senza cercare il «?» nel 360°).</td></tr>
+      <tr><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd></td><td>Risposta al quiz.</td></tr>
+      <tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>Lezione precedente / successiva.</td></tr>
+      <tr><td><kbd>T</kbd></td><td>Mostra o nascondi il telecomando.</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Chiude la finestra in primo piano.</td></tr>
+    </table>
+    <p style="text-align:left;font-size:14px;opacity:.8">Per guardarsi intorno nel 360° si trascina lo schermo con il mouse o con il dito. Niente panico: nulla si rompe, e con <b>☰ Lezioni</b> si torna sempre al menu.</p>
+    <div style="text-align:center"><button class="bigbtn oro" onclick="chiudiAiuto()">Ho capito!</button></div>
+  </div>
 </div>
 
 <div id="tarBox"></div>
@@ -520,7 +643,17 @@ window.EDU_BASE = <?php echo json_encode(rtrim(dirname($_SERVER['SCRIPT_NAME'] ?
    yaw: 0=davanti · 90=destra · -90=sinistra · 180=dietro
    ===================================================================== */
 const CDN='https://vz-bedaaab5-085.b-cdn.net/';
-const B=(g)=>({hls:CDN+g+'/playlist.m3u8', mp4:CDN+g+'/play_720p.mp4', guid:g});
+/* OFFLINE (v2.4): nel pacchetto locale i video stanno in video/<guid>.mp4 e i
+   contenuti in dati.js (window.EDU_DATI). Nessuna rete necessaria. */
+const OFFLINE=!!window.EDU_OFFLINE;
+const B=(g)=>OFFLINE?{hls:null, mp4:'video/'+g+'.mp4', guid:g}:{hls:CDN+g+'/playlist.m3u8', mp4:CDN+g+'/play_720p.mp4', guid:g};
+function eduOffline(params){
+  const q=new URLSearchParams(params), a=q.get('action'), D=window.EDU_DATI||{};
+  if(a==='menu') return Promise.resolve(D.menu||{ok:false,err:'offline'});
+  if(a==='lezione'){ const l=(D.lezioni||{})[q.get('id')||'']; return Promise.resolve(l?{ok:true,lezione:l}:{ok:false,err:'lezione'}); }
+  if(a==='track') return Promise.resolve({ok:true});
+  return Promise.resolve({ok:false,err:'offline'});
+}
 
 const _qsTop=new URLSearchParams(location.search);
 const CLASSE=(_qsTop.get('classe')||'ANON').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,20)||'ANON';
@@ -532,6 +665,7 @@ const LEZ_CACHE={};         // slug -> lezione completa (per sessione)
 function hexToBuf(h){const a=new Uint8Array(h.length/2);for(let i=0;i<a.length;i++)a[i]=parseInt(h.substr(i*2,2),16);return a.buffer;}
 function b64ToBuf(b){const s=atob(b);const a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return a.buffer;}
 async function eduApi(params,post){
+  if(OFFLINE) return eduOffline(params);
   const cls=(typeof CLASSE!=='undefined'&&CLASSE!=='ANON')?'&classe='+encodeURIComponent(CLASSE):'';
   const r=await fetch((window.EDU_BASE||'')+'api.php?'+params+(window.EDU_C?'&c='+encodeURIComponent(window.EDU_C):'')+cls,{
     method:post?'POST':'GET',
@@ -550,13 +684,13 @@ function cacheSet(k,v){ try{localStorage.setItem(k,JSON.stringify({t:Date.now(),
 function cacheGet(k){ try{const x=JSON.parse(localStorage.getItem(k)||'null'); return x&&x.v||null;}catch(e){return null;} }
 function normalizzaLezione(l){
   l=JSON.parse(JSON.stringify(l));                                  /* copia pulita */
-  l.video=(l.video||[]).filter(v=>v&&v.guid).map(v=>Object.assign(B(v.guid),{lis:(v.lis||v.video_lis||null),audio:(v.audio||null)}));  /* foto360: prossima versione; lis: clip interprete (fix v1.3: prima veniva scartato) */
+  l.video=(l.video||[]).filter(v=>v&&v.guid).map(v=>Object.assign(B(v.guid),{lis:(v.lis||v.video_lis||null),audio:(v.audio||null),tit:(v.tit||null),durata:(v.durata_s||null)}));  /* foto360: prossima versione; lis: clip interprete (fix v1.3: prima veniva scartato); tit: titolo del capitolo (migr. 32) */
   (l.tappe||[]).forEach(t=>{t._done=false;(t.hotspots||[]).forEach(h=>h._fatto=false);});
   return l;
 }
 function applicaBrand(cl){
   CLIENTE=cl||null; if(!cl)return;
-  QUIZ_LIVE_OK=!(cl.limiti&&cl.limiti.quiz_live===false);      /* piano Base: niente quiz live */
+  QUIZ_LIVE_OK=!(cl.limiti&&cl.limiti.quiz_live===false)&&!OFFLINE;      /* piano Base: niente quiz live; offline: serve il server */
   if(!QUIZ_LIVE_OK){ const t=document.getElementById('tbLive'), q=document.getElementById('qLiveBtn'); if(t)t.dataset.piano='no'; if(q)q.style.display='none'; }
   const b=cl.brand||{};
   if(b.titolo){ const t=document.getElementById('brandTit'), h=document.getElementById('brandH1'); if(t)t.textContent=b.titolo; if(h)h.textContent=b.titolo; document.title=b.titolo+' — Lezioni'; }
@@ -612,7 +746,7 @@ async function caricaMenu(){
     throw e;
   }
 }
-let LICENZA_KO=null, QUIZ_LIVE_OK=true, MENU_CARICATO=false;
+let LICENZA_KO=null, QUIZ_LIVE_OK=!OFFLINE, MENU_CARICATO=false;
 async function caricaLezione(slug){
   if(LEZ_CACHE[slug])return normalizzaLezione(LEZ_CACHE[slug]);
   try{
@@ -702,6 +836,7 @@ function lisSrc(v){
   const s=String(v.lis).trim();
   if(/^https?:/i.test(s))return {mp4:s,hls:null,guid:s};
   const g=s.replace(/^bunny:/i,'');
+  if(OFFLINE) return {mp4:'video/'+g+'.mp4',hls:null,guid:g};
   return {mp4:CDN+g+'/play_720p.mp4',hls:CDN+g+'/playlist.m3u8',guid:g};
 }
 /* ---- AUDIO DI SOTTOFONDO DELLA CLIP (migr. 25) ----
@@ -836,6 +971,8 @@ function playCoccio(src){
   return new Promise(async (resolve)=>{
     const id=ytId(src), guid=bunnyGuid(src);
     if(!id&&!guid){ resolve('assente'); return; }
+    /* offline: un video YouTube si usa solo se è stato salvato come video/yt_<id>.mp4 */
+    const locale=(OFFLINE&&!guid&&id)?('video/yt_'+id+'.mp4'):null;
 
     const ovl=document.getElementById('coccioOvl');
     const slot=document.getElementById('coccioSlot');
@@ -858,16 +995,16 @@ function playCoccio(src){
     slot.textContent='';
     ovl.classList.add('on');
 
-    if(guid){                                   /* video su Bunny (consigliato a scuola) */
+    if(guid||locale){                           /* video su Bunny (consigliato a scuola) o file locale */
       const v=document.createElement('video');
       v.playsInline=true; v.controls=false; v.autoplay=true;
       slot.appendChild(v);
-      const mp4=CDN+guid+'/play_720p.mp4', hls=CDN+guid+'/playlist.m3u8';
+      const mp4=locale||(OFFLINE?('video/'+guid+'.mp4'):CDN+guid+'/play_720p.mp4'), hls=(OFFLINE||locale)?null:CDN+guid+'/playlist.m3u8';
       let _h=null;
-      if(window.Hls&&Hls.isSupported()){
+      if(hls&&window.Hls&&Hls.isSupported()){
         _h=new Hls(); _h.loadSource(hls); _h.attachMedia(v);
         _h.on(Hls.Events.ERROR,(e,d)=>{ if(d&&d.fatal){ try{_h.destroy();}catch(x){} v.src=mp4; v.play().catch(()=>{}); } });
-      }else{ v.src=v.canPlayType('application/vnd.apple.mpegurl')?hls:mp4; }
+      }else{ v.src=(hls&&v.canPlayType('application/vnd.apple.mpegurl'))?hls:mp4; }
       v.addEventListener('playing',()=>{attesa.style.display='none';});
       v.addEventListener('ended',()=>fine('completato'));
       v.addEventListener('error',()=>fine('errore'));
@@ -978,7 +1115,7 @@ function vaiMenu(){
   started=false;
   updSeekbar(); renderCue('');
   document.getElementById('menuX').style.display=LEZ?'block':'none';
-  ['scoperta','quiz','fine'].forEach(i=>document.getElementById(i).classList.remove('on'));
+  ['scoperta','quiz','fine','capitoli','aiuto'].forEach(i=>document.getElementById(i).classList.remove('on'));
   document.getElementById('pill').classList.remove('on');
   const g=document.getElementById('hotspots'); while(g.firstChild)g.removeChild(g.firstChild);
   document.getElementById('tbLive').style.display='none';
@@ -989,6 +1126,7 @@ function vaiMenu(){
 /* ---- sorgente video ---- */
 function attach(v){
   if(_hls){try{_hls.destroy();}catch(e){}_hls=null;}
+  if(!v.hls){ vid.src=v.mp4; vid.load(); return; }        /* offline: mp4 locale */
   if(window.Hls&&Hls.isSupported()){
     _hls=new Hls(); _hls.loadSource(v.hls); _hls.attachMedia(vid);
     _hls.on(Hls.Events.ERROR,(e,d)=>{ if(d&&d.fatal){ try{_hls.destroy();}catch(x){} _hls=null; vid.src=v.mp4; vid.load(); vid.play().catch(()=>{});} });
@@ -1090,6 +1228,7 @@ function apriTappa(t){
   });
   document.getElementById('pill').textContent=PILL_BASE;
   document.getElementById('pill').classList.add('on');
+  renderSeekMarks();
 }
 
 /* ---- bussola: se la scoperta che brilla e' fuori dallo schermo, la pill
@@ -1100,7 +1239,7 @@ function bussola(){
   const pill=document.getElementById('pill');
   if(!tappaAttiva||!pill.classList.contains('on')) return;
   const cam=document.getElementById('cam'); if(!cam) return;
-  const r=cam.getAttribute('rotation');
+  const r=cam.getAttribute('rotation'); if(!r)return;
   let camYaw=-r.y; camYaw=((camYaw%360)+540)%360-180;
   const camPitch=r.x;
   const h=tappaAttiva.hotspots.find(x=>!x._fatto); if(!h){ pill.textContent=PILL_BASE; return; }
@@ -1171,7 +1310,11 @@ function togglePausa(){
   if(vid.paused){ vid.play().catch(()=>{}); } else { vid.pause(); }
   updPausaBtn();
 }
-function updPausaBtn(){ document.getElementById('btnPausa').innerHTML=vid.paused?'▶<span class="lbl"> Riprendi</span>':'⏸<span class="lbl"> Pausa</span>'; }
+function updPausaBtn(){
+  const p=vid.paused;
+  document.getElementById('btnPausa').innerHTML=p?'▶<span class="lbl"> Riprendi</span>':'⏸<span class="lbl"> Pausa</span>';
+  const r=document.getElementById('rmPlay'); if(r){ r.innerHTML='<span class="ic">'+(p?'▶':'⏸')+'</span><small>'+(p?'Play':'Pausa')+'</small>'; }
+}
 function prossimaTappa(){
   if(!LEZ)return;
   if(tappaAttiva){
@@ -1192,6 +1335,153 @@ function prossimaTappa(){
   }else{ avviaQuiz(); }
   updPausaBtn();
 }
+
+/* =====================================================================
+   TELECOMANDO (v2.4) — modalità presentatore
+   Capitolo = una clip della playlist; lezione = una card del menu.
+   Regola: chi presenta non deve mai restare bloccato. «Avanti» (PagGiù,
+   Invio, clicker) fa sempre la cosa giusta in base a cosa c'è sullo schermo.
+   ===================================================================== */
+let REMOTE=true; try{ REMOTE=localStorage.getItem('edu_remote')!=='0'; }catch(e){}
+function toggleRemote(){
+  REMOTE=!REMOTE; try{localStorage.setItem('edu_remote',REMOTE?'1':'0');}catch(e){}
+  document.getElementById('btnRemote').style.background=REMOTE?'':'rgba(255,255,255,.25)';
+  updRemote(); say(REMOTE?'Telecomando acceso: i pulsanti grandi sono in basso.':'Telecomando nascosto (tasto T per riaverlo).');
+}
+function capTitolo(k){ const v=LEZ&&LEZ.video[k]; return (v&&v.tit)?v.tit:''; }
+function updRemote(){
+  const on=REMOTE&&!!LEZ&&started;
+  document.getElementById('remote').classList.toggle('on',on);
+  document.body.classList.toggle('remote-on',on);
+  if(!LEZ)return;
+  const ultimo=vidIdx>=LEZ.video.length-1;
+  const cn=document.getElementById('rmCapNext'); cn.querySelector('small').textContent=ultimo?'Quiz':'Capitolo';
+  cn.title=ultimo?'Fine dei capitoli: si passa al quiz (PagGiù)':'Capitolo successivo (PagGiù)';
+  document.getElementById('rmLezPrev').disabled=(lezioneVicina(-1)<0);
+  document.getElementById('rmLezNext').disabled=(lezioneVicina(1)<0);
+  const fn=document.getElementById('fineNext'); if(fn)fn.style.display=(lezioneVicina(1)>=0)?'':'none';
+}
+function chiudiTappaAttiva(){
+  const g=document.getElementById('hotspots'); while(g.firstChild)g.removeChild(g.firstChild);
+  document.getElementById('pill').classList.remove('on');
+  document.getElementById('scoperta').classList.remove('on');
+  tappaAttiva=null; audioDuck(false);
+}
+/* riarma le tappe di una clip da un certo secondo in poi: rivedendo un pezzo, le scoperte ricompaiono */
+function riarmaDa(v,daT){
+  if(!LEZ)return;
+  LEZ.tappe.forEach(x=>{ if(x.v===v&&x.t>=daT-0.1){ x._done=false; (x.hotspots||[]).forEach(h=>h._fatto=false); } });
+  renderSeekMarks();
+}
+function salta(d){
+  if(!LEZ||!started)return;
+  const a=Math.max(0,Math.min((vid.duration||1e9)-0.2,(vid.currentTime||0)+d));
+  try{ vid.currentTime=a; }catch(e){}
+  if(d<0){ chiudiTappaAttiva(); riarmaDa(vidIdx,a); }
+  else { LEZ.tappe.forEach(x=>{ if(x.v===vidIdx&&x.t<a&&x.t>=(vid.currentTime||0)-d)x._done=true; }); renderSeekMarks(); }
+  updPausaBtn();
+}
+function vaiCapitolo(k){
+  if(!LEZ||k<0||k>=LEZ.video.length)return;
+  chiudiTappaAttiva(); ttsStop();
+  ['quiz','fine','capitoli','elenco'].forEach(i=>document.getElementById(i).classList.remove('on'));
+  LEZ.tappe.forEach(t=>{ if(t.v<k){ t._done=true; } else { t._done=false; (t.hotspots||[]).forEach(h=>h._fatto=false); } });
+  vidIdx=k; attach(LEZ.video[k]); audioAttach(LEZ.video[k]);
+  started=true; vid.play().catch(()=>{});
+  updPausaBtn(); updSeekbar(); loadCC(); lisSync(true); renderSeekMarks();
+  say('Capitolo '+(k+1)+' di '+LEZ.video.length+(capTitolo(k)?': '+capTitolo(k):''));
+}
+function capitoloSuccessivo(){
+  if(!LEZ)return;
+  if(vidIdx+1<LEZ.video.length) vaiCapitolo(vidIdx+1);
+  else { chiudiTappaAttiva(); LEZ.tappe.forEach(t=>t._done=true); avviaQuiz(); }
+}
+function capitoloPrecedente(){
+  if(!LEZ)return;
+  if((vid.currentTime||0)>3||vidIdx===0){ vaiCapitolo(vidIdx); }   /* prima all'inizio del capitolo… */
+  else vaiCapitolo(vidIdx-1);                                       /* …poi a quello prima */
+}
+function vaiTappa(t){
+  if(!LEZ||!t)return;
+  const a=Math.max(0,t.t-2.5);
+  const dopo=()=>{ try{vid.currentTime=a;}catch(e){} riarmaDa(t.v,a); vid.play().catch(()=>{}); updPausaBtn(); };
+  if(t.v!==vidIdx){ vaiCapitolo(t.v); vid.addEventListener('loadedmetadata',dopo,{once:true}); }
+  else { chiudiTappaAttiva(); ['capitoli','elenco'].forEach(i=>document.getElementById(i).classList.remove('on')); started=true; dopo(); updSeekbar(); }
+}
+function lezioneVicina(d){
+  if(!CATALOGO.length||lezIdx<0)return -1;
+  for(let i=lezIdx+d;i>=0&&i<CATALOGO.length;i+=d){ const l=CATALOGO[i]; if(l&&l.stato!=='soon'&&!l.soon)return i; }
+  return -1;
+}
+function cambiaLezione(d){
+  const i=lezioneVicina(d);
+  if(i<0){ say(d>0?'Era l\'ultima lezione: con ☰ Lezioni tornate al menu.':'Questa è la prima lezione.',true); return; }
+  chiudiTappaAttiva(); ttsStop(); audioStop(); try{vid.pause();}catch(e){}
+  ['scoperta','quiz','fine','capitoli','aiuto','elenco'].forEach(x=>document.getElementById(x).classList.remove('on'));
+  started=false; updSeekbar();
+  avviaLezione(i);
+}
+function lezioneSuccessiva(){ cambiaLezione(1); }
+function lezionePrecedente(){ cambiaLezione(-1); }
+/* «Avanti» intelligente: il tasto del clicker fa sempre la cosa giusta */
+function avanti(){
+  const on=(id)=>document.getElementById(id).classList.contains('on');
+  if(on('avvio')){ avviaCorso(); return; }
+  if(on('coccioOvl')){ chiudiCoccio(); return; }
+  if(on('prologoOvl')){ document.getElementById('prologoBtn').click(); return; }
+  if(on('aiuto')){ chiudiAiuto(); return; }
+  if(on('capitoli')){ chiudiCapitoli(); return; }
+  if(on('elenco')){ chiudiElenco(); return; }
+  if(on('scoperta')){ chiudiScoperta(); return; }
+  if(on('fine')){ if(lezioneVicina(1)>=0)lezioneSuccessiva(); else vaiMenu(); return; }
+  if(on('quiz')){ if(document.getElementById('qSapevi').style.display==='block')sapeviAvanti(); return; }
+  if(on('menu')){ if(LEZ)closeMenu(); return; }
+  if(!LEZ||!started)return;
+  if(tappaAttiva){ prossimaTappa(); return; }
+  capitoloSuccessivo();
+}
+function indietro(){
+  const on=(id)=>document.getElementById(id).classList.contains('on');
+  if(on('scoperta')){ chiudiScoperta(); return; }
+  if(on('aiuto')||on('capitoli')||on('elenco')){ ['aiuto','capitoli','elenco'].forEach(i=>document.getElementById(i).classList.remove('on')); ttsStop(); return; }
+  if(!LEZ||!started)return;
+  capitoloPrecedente();
+}
+function apriCapitoli(){
+  if(!LEZ){ say('Prima scegliete una lezione!'); return; }
+  const box=document.getElementById('capBody'); box.textContent='';
+  LEZ.video.forEach((v,k)=>{
+    const tappe=LEZ.tappe.filter(t=>t.v===k);
+    const b=document.createElement('button'); b.className='capItem'+(k===vidIdx?' on':''); b.type='button';
+    const n=document.createElement('span'); n.className='n'; n.textContent=(k+1)+'.'; b.appendChild(n);
+    const w=document.createElement('div');
+    const h3=document.createElement('h3'); h3.textContent=v.tit||('Capitolo '+(k+1)); w.appendChild(h3);
+    const p=document.createElement('p'); p.textContent=(v.durata?fmt(v.durata)+' · ':'')+tappe.length+(tappe.length===1?' scoperta':' scoperte')+(k===vidIdx?' · in corso':''); w.appendChild(p);
+    b.appendChild(w); b.onclick=()=>{ chiudiCapitoli(); vaiCapitolo(k); }; box.appendChild(b);
+    tappe.forEach(t=>{
+      const tb=document.createElement('button'); tb.className='capTappa'; tb.type='button';
+      const h=(t.hotspots||[])[0];
+      tb.textContent='• '+fmt(t.t)+'  '+((h&&h.tit)||t.cocciu||'scoperta')+(t._done?' ✓':'');
+      tb.onclick=()=>{ chiudiCapitoli(); vaiTappa(t); }; box.appendChild(tb);
+    });
+  });
+  vid.pause(); updPausaBtn();
+  document.getElementById('capitoli').classList.add('on');
+}
+function chiudiCapitoli(){ document.getElementById('capitoli').classList.remove('on'); }
+function apriAiuto(){ if(LEZ&&started){ vid.pause(); updPausaBtn(); } document.getElementById('aiuto').classList.add('on'); }
+function chiudiAiuto(){ document.getElementById('aiuto').classList.remove('on'); }
+/* tacche delle scoperte sulla barra del tempo */
+function renderSeekMarks(){
+  const m=document.getElementById('seekMarks'); if(!m)return; m.textContent='';
+  if(!LEZ||!vid.duration)return;
+  LEZ.tappe.filter(t=>t.v===vidIdx).forEach(t=>{
+    const i=document.createElement('i'); i.style.left=Math.max(0,Math.min(100,t.t/vid.duration*100))+'%';
+    if(t._done)i.classList.add('done'); i.title=fmt(t.t); m.appendChild(i);
+  });
+}
+vid.addEventListener('loadedmetadata',renderSeekMarks);
+try{ if(localStorage.getItem('edu_remote')==='0')document.getElementById('btnRemote').style.background='rgba(255,255,255,.25)'; }catch(e){}
 
 /* ---- elenco scoperte (ripasso + alternativa testuale) ---- */
 function apriElenco(){
@@ -1226,6 +1516,18 @@ document.addEventListener('keydown',(e)=>{
   if(document.getElementById('quiz').classList.contains('on')&&/^[1-4]$/.test(e.key)){
     const b=document.querySelector('#qOpts .opt[data-n="'+e.key+'"]'); if(b&&!b.disabled){ b.click(); } return;
   }
+  /* telecomando (v2.4): PagGiù/Invio = avanti (clicker), PagSu = indietro, frecce = ±10 s, C capitoli, T telecomando, [ ] lezioni */
+  if(e.key==='PageDown'){ e.preventDefault(); avanti(); return; }
+  if(e.key==='PageUp'){ e.preventDefault(); indietro(); return; }
+  if(e.key==='Enter'&&!(e.target&&/button|a|input/i.test(e.target.tagName))&&!document.getElementById('quiz').classList.contains('on')){ e.preventDefault(); avanti(); return; }
+  const liberi=LEZ&&started&&!document.querySelector('.ovl.on')&&!document.getElementById('coccioOvl').classList.contains('on');
+  if(e.key==='ArrowRight'&&liberi){ e.preventDefault(); salta(10); return; }
+  if(e.key==='ArrowLeft'&&liberi){ e.preventDefault(); salta(-10); return; }
+  if((e.key==='c'||e.key==='C')&&LEZ&&!document.getElementById('menu').classList.contains('on')){ if(document.getElementById('capitoli').classList.contains('on'))chiudiCapitoli(); else apriCapitoli(); return; }
+  if((e.key==='t'||e.key==='T')&&LEZ){ toggleRemote(); return; }
+  if(e.key==='?'||e.key==='h'||e.key==='H'){ if(document.getElementById('aiuto').classList.contains('on'))chiudiAiuto(); else apriAiuto(); return; }
+  if(e.key===']'&&LEZ){ lezioneSuccessiva(); return; }
+  if(e.key==='['&&LEZ){ lezionePrecedente(); return; }
   if(e.key===' '&&LEZ&&started&&!document.querySelector('.ovl.on')){ e.preventDefault(); togglePausa(); return; }
   if((e.key==='n'||e.key==='N')&&LEZ&&!document.getElementById('menu').classList.contains('on')){ prossimaTappa(); return; }
   if((e.key==='r'||e.key==='R')&&ACC==='ipo'){ ttsRipeti(); return; }
@@ -1234,6 +1536,8 @@ document.addEventListener('keydown',(e)=>{
   const on=(id)=>document.getElementById(id).classList.contains('on');
   if(on('scoperta')){ chiudiScoperta(); return; }
   if(on('elenco')){ chiudiElenco(); return; }
+  if(on('capitoli')){ chiudiCapitoli(); return; }
+  if(on('aiuto')){ chiudiAiuto(); return; }
   const cm=document.getElementById('ccMenu');
   if(cm.style.display==='flex'){ cm.style.display='none'; return; }
   if(on('menu')&&LEZ){ closeMenu(); }
@@ -1375,6 +1679,7 @@ async function fineLezione(){
   if(tutto)await playCoccio(mascVideo('fine_corso'));       /* diploma: tutte le lezioni fatte */
   document.getElementById('fineTxt').textContent=
     (tutto?'Percorso completato! ':'')+'Lezione "'+LEZ.tit+'" completata: '+punti+' risposte giuste su '+QZ.length+'!';
+  updRemote();
   document.getElementById('fine').classList.add('on');
   tts(document.getElementById('fineTxt').textContent);
   say(tutto?'Avete completato tutto il viaggio del sale! ✨':'Che classe fantastica! ✨',true);
@@ -1398,7 +1703,8 @@ function fmt(x){x=Math.max(0,Math.floor(x||0));return String(Math.floor(x/60)).p
 function updSeekbar(){
   document.getElementById('seekbar').style.display=started?'flex':'none';
   const c=document.getElementById('seekClip');
-  c.textContent=(LEZ&&LEZ.video.length>1)?('clip '+(vidIdx+1)+'/'+LEZ.video.length):'';
+  c.textContent=(LEZ&&LEZ.video.length>1)?('cap. '+(vidIdx+1)+'/'+LEZ.video.length):'';
+  updRemote();
 }
 vid.addEventListener('timeupdate',()=>{
   if(!seeking&&vid.duration)seekEl.value=Math.floor(vid.currentTime/vid.duration*1000);
@@ -1406,7 +1712,12 @@ vid.addEventListener('timeupdate',()=>{
 });
 seekEl.addEventListener('input',()=>{seeking=true;});
 seekEl.addEventListener('change',()=>{
-  if(vid.duration)vid.currentTime=seekEl.value/1000*vid.duration;
+  if(vid.duration){
+    const prima=vid.currentTime||0, a=seekEl.value/1000*vid.duration;
+    vid.currentTime=a;
+    if(a<prima){ chiudiTappaAttiva(); riarmaDa(vidIdx,a); }
+    else if(LEZ){ LEZ.tappe.forEach(x=>{ if(x.v===vidIdx&&x.t<a&&x.t>=prima)x._done=true; }); renderSeekMarks(); }
+  }
   seeking=false;
 });
 
@@ -1440,7 +1751,7 @@ async function loadCC(){
   const vars=_ccFound[key]?[_ccFound[key]]:(CC_VAR[ccLang]||[ccLang]);
   let lastErr='404';
   for(const code of vars){
-    const url=CDN+v.guid+'/captions/'+code+'.vtt';
+    const url=OFFLINE?('video/'+v.guid+'.'+code+'.vtt'):(CDN+v.guid+'/captions/'+code+'.vtt');
     try{
       const r=await fetch(url);
       if(!r.ok){ lastErr='404'; console.log('[CC] non trovato:',url); continue; }
@@ -1523,6 +1834,6 @@ buildMenu();               /* mostra "Carico le lezioni…" */
   }
 })();
 </script>
-<script src="<?php echo htmlspecialchars(rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/'), '/') . '/'); ?>live-lim.js?v=13"></script>
+<?php if(!$EDU_OFFLINE): ?><script src="<?php echo htmlspecialchars(rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/'), '/') . '/'); ?>live-lim.js?v=13"></script><?php endif; ?>
 </body>
 </html>

@@ -1,5 +1,49 @@
 # Registro delle modifiche
 
+## 29/10/2026 — player v2.4: telecomando, pacchetto offline, vendemmia ritrovata
+
+### Perché mancava la vendemmia
+La lezione `vendemmia-alagna` (9 clip, 27 scoperte, quiz 6+6) era in stato **bozza**: `edu_get_corsi` e
+`edu_get_lezione_tenant` escludono le bozze, quindi il player non la mostrava. Ora è in stato **soon**
+(«🔒 Prossimamente» nel menu) finché i video non vengono rimontati; il piano di rimontaggio è in
+`docs/VENDEMMIA-RIMONTAGGIO.md` e lo strumento per segnare le scene in `strumenti/taglia-scene.html`.
+
+### Telecomando per chi presenta (app/index.php v2.4)
+- Barra grande in basso durante la lezione: ⏮ lezione · ⏪ capitolo · −10 s · **Play/Pausa** · +10 s ·
+  capitolo ⏩ · lezione ⏭ · ☰ Capitoli · ? Aiuto. Si nasconde con 🎛 (teachbar) o tasto T.
+- **Capitolo** = clip della playlist. Avanti/indietro riarmano le scoperte della clip su cui si torna;
+  l'ultimo «capitolo successivo» apre il quiz. Lezione precedente/successiva saltano le «soon».
+- **«Avanti» intelligente** (PagGiù, Invio, telecomandi da presentazione): chiude la scheda, apre la
+  scoperta che brilla, passa al capitolo, avanza dal prologo/mascotte/fine. PagSu = indietro.
+  Frecce ←/→ ±10 s, C indice dei capitoli, ? aiuto, [ ] lezioni.
+- Indice **☰ Capitoli** con titolo (migr. 32), durata e scoperte cliccabili (si riparte 2,5 s prima).
+- Tacche delle scoperte sulla barra del tempo; tornando indietro con la barra le scoperte ricompaiono.
+- Overlay di fine: pulsante «⏭ Lezione successiva». Seek-bar: etichetta «cap. n/N».
+- `bussola()` non esplode più se la camera non ha ancora la rotazione.
+
+### Migrazione 32 + regia v17.2 — titolo dei capitoli
+`edu_media.titolo` esposto come `video[].tit` da `edu_assembla_lezione`; campo 📑 nella playlist della
+regia (`salvaCapitolo`). Seed dei titoli per vendemmia, corallo, tappeti e salinaio.
+**Da applicare in produzione** insieme a regia v17.2 e player v2.4; poi cancellare `dati/cache_*.json`.
+
+### Pacchetto OFFLINE (`offline/`, vedi `offline/LEGGIMI-OFFLINE.md`)
+- `index.php` renderizzato con `EDU_OFFLINE=1` diventa statico: librerie da `lib/`, contenuti da `dati.js`
+  (`window.EDU_DATI`), video da `video/<guid>.mp4`, sottotitoli `video/<guid>.<lingua>.vtt`, nessuna
+  chiamata a `api.php`/Bunny/YouTube (mascotte YouTube solo se salvata come `video/yt_<id>.mp4`).
+  Quiz live e tracking spenti. In produzione non cambia nulla.
+- `costruisci-player.sh` (php) · `crea-pacchetto.js` (node ≥ 18, RPC con la anon key; `--bozza slug=token`
+  per includere una lezione in bozza via token di anteprima; `--res 1080p`) · `avvia.js` server locale
+  con Range (salti nei video) + `AVVIA.bat`/`avvia.sh` · script `scarica-video.sh/.bat` generati.
+- Pacchetto `esplora-trapani` già versionato (`dati.js`: salinaio, corallo, tappeti, **vendemmia**).
+- La tappa vuota del salinaio (clip 1, 1:45, scheda «✨» senza testo) non è stata copiata nel pacchetto:
+  va cancellata in regia.
+
+### Test
+- Nuove suite jsdom `test/t_telecomando.js` (40 verifiche) e `test/t_offline.js` (24), in `npm test`.
+- Prova nel browser vero (Chromium headless, rete esterna bloccata): pacchetto offline senza richieste
+  verso internet, telecomando, indice capitoli, PagGiù/PagSu, quiz, lezione prec./succ.
+
+
 ## 26/10/2026 — nascita della repository
 
 Fino a oggi il progetto viveva solo in pacchetti zip (`esplora-trapani-edu-CATALOGO.zip`, `FASE1-AUDIT.zip`,

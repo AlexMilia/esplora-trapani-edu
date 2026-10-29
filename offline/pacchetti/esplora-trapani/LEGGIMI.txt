@@ -1,0 +1,21 @@
+ESPLORA TRAPANI EDU — PACCHETTO OFFLINE · esplora-trapani · generato il 2026-10-29
+
+Questa cartella contiene il player 360 e 4 lezioni, pronte da usare SENZA connessione.
+
+LA PRIMA VOLTA (con la connessione):
+  1. Windows: doppio clic su  scarica-video.bat      Mac/Linux: bash scarica-video.sh
+     Scarica 24 video in video/ (circa 2.2 GB a 720p). Si può interrompere e rilanciare.
+  2. Se serve Node.js (consigliato): https://nodejs.org → versione LTS → installa.
+
+IN CLASSE (senza connessione):
+  Windows: doppio clic su  AVVIA.bat      Mac/Linux: bash avvia.sh
+  Si apre il browser su http://localhost:8765 con il menu delle lezioni.
+  Il telecomando in basso (o il tasto PagGiù del clicker) guida la lezione: ? = aiuto.
+
+NON APRIRE index.html con doppio clic: il browser blocca i video 360 aperti da file. Usare sempre AVVIA.
+
+COSA NON FUNZIONA OFFLINE: il Quiz live con i telefoni (serve il server), il tracking anonimo,
+i video della mascotte su YouTube (DsrzZPFkTmM, x9aD8os2FFs, QwNFhpiacBo, QNEidkvBGUo, gOJZIl_ug_s: per averli, salvali come video/yt_<id>.mp4).
+
+AGGIORNARE I CONTENUTI: dal PC con la repository →  node offline/crea-pacchetto.js --tenant esplora-trapani
+poi ricopiare dati.js (e rilanciare scarica-video se ci sono clip nuove).

@@ -5,7 +5,7 @@
   "description": "Esplora Trapani Edu — piattaforma educativa 360° per le scuole (player A-Frame, regia, API PHP, Supabase, Stripe). Il package.json serve solo per i test jsdom.",
   "scripts": {
     "test": "bash test/esegui-js.sh",
-    "test:player": "bash test/rendi-player.sh && node test/test-profondo.js && node test/t_player26.js && node test/t_audio.js",
+    "test:player": "bash test/rendi-player.sh && node test/test-profondo.js && node test/t_player26.js && node test/t_audio.js && node test/t_telecomando.js && node test/t_offline.js",
     "test:regia": "node test/test-regia.js && node test/test-regia26.js && node test/t_flusso_regia.js && node test/t_viewer.js && node test/t_sec_xss.js && node test/t_regia_audio.js && node test/t_regia_abbonamenti.js",
     "test:statica": "node test/t_statica.js"
   },

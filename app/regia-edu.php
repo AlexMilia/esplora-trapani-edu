@@ -859,6 +859,8 @@ function renderMedia(){
       <span class="tag">${m.tipo==='foto360'?'FOTO':'VIDEO'} ${i+1}</span>
       <span class="g">${esc(m.guid||m.url||'')}</span>
       <span class="hint">${esc(m.note||'')}</span>
+      <span class="mascCell" title="Titolo del capitolo: compare nell'indice ☰ Capitoli del player (telecomando). Vuoto = «Capitolo n».">📑
+        <input class="lisIn" id="cap_${m.id}" value="${esc(m.titolo||'')}" placeholder="Titolo capitolo" maxlength="80" onchange="salvaCapitolo('${m.id}')"></span>
       <span class="mascCell" title="Video con interprete LIS per questa clip (GUID Bunny o URL mp4)">🤟
         <input class="lisIn" id="lis_${m.id}" value="${esc(m.video_lis||'')}" placeholder="GUID LIS" onchange="salvaLis('${m.id}')"></span>
       <span class="mascCell" title="Audio di sottofondo di questa clip: URL https diretto al file .mp3/.m4a. Parte e si ferma con il video.">🎵
@@ -872,6 +874,14 @@ function renderMedia(){
   $('mediaChips').innerHTML=MEDIA.map((m,i)=>`
     <button class="chip${selMedia&&selMedia.id===m.id?' on':''}" onclick="selezionaMedia('${m.id}')">
       ${m.tipo==='foto360'?'🖼':'🎬'} clip ${i+1}</button>`).join('');
+}
+/* ---- TITOLO DEL CAPITOLO (migr. 32): indice ☰ Capitoli del player ---- */
+async function salvaCapitolo(id){
+  const t=($('cap_'+id).value||'').trim().slice(0,80);
+  const {error}=await sb.from('edu_media').update({titolo:t||null}).eq('id',id);
+  if(error){ toast(/titolo/.test(error.message)?'Esegui prima la migrazione 32 (colonna titolo)':'Errore: '+error.message); return; }
+  const m=MEDIA.find(x=>x.id===id); if(m)m.titolo=t||null;
+  toast(t?'Titolo del capitolo salvato':'Titolo rimosso: nel player sarà «Capitolo n»');
 }
 /* ---- AUDIO DI SOTTOFONDO DELLA CLIP (migr. 25) ---- */
 let _provaAudio=null;

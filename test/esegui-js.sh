@@ -8,7 +8,7 @@ bash ./rendi-player.sh || exit 1
 TOT=0; KO=0
 for t in t_statica.js test-regia.js test-regia26.js t_flusso_regia.js t_viewer.js t_sec_xss.js \
          t_regia_audio.js t_regia_abbonamenti.js t_mascotte.js t_audit.js \
-         test-profondo.js t_player26.js t_audio.js; do
+         test-profondo.js t_player26.js t_audio.js t_telecomando.js t_offline.js; do
   echo; echo "=================== $t ==================="
   OUT="$(node "$t" 2>&1)"; RC=$?
   echo "$OUT" | tail -n 25

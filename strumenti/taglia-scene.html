@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Taglia-scene · Esplora Trapani Edu</title>
+<!-- =====================================================================
+     TAGLIA-SCENE (v1 · 29/10/2026) — strumento LOCALE per scegliere le scene
+     Apri questo file nel browser (doppio clic va bene: nessun 360, nessuna rete),
+     scegli un file video dal PC, guardalo e segna i pezzi da tenere o scartare.
+     Alla fine esporti la lista (CSV) e i comandi ffmpeg già pronti.
+     Tasti: I = inizio · O = fine · Invio = salva · Spazio = pausa · J/L = −/+5 s · K = pausa
+            ←/→ = −/+1 s · , . = −/+ un fotogramma · 1-3 = etichetta · Canc = elimina selezionato
+     Tutto resta salvato nel browser (localStorage) per nome di file.
+     ===================================================================== -->
+<style>
+  :root{--rosa:#e8788a;--rosaTxt:#b8506a;--oro:#c9a15a;--ink:#3a2e2a;--sale:#faf7f2;--verde:#3f7d4f;--rosso:#a33}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1b1a1a;color:#f3eee8;min-height:100vh}
+  header{padding:12px 18px;background:#0e0d0d;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  header h1{font-size:17px}
+  header h1 em{color:var(--rosa);font-style:normal}
+  .hint{font-size:12px;opacity:.7}
+  main{display:grid;grid-template-columns:minmax(0,3fr) minmax(320px,2fr);gap:14px;padding:14px 18px}
+  @media(max-width:900px){main{grid-template-columns:1fr}}
+  video{width:100%;background:#000;border-radius:12px;max-height:62vh}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+  button,select,input[type=text]{font-family:inherit;font-size:14px;border-radius:10px;border:1px solid #555;background:#2a2828;color:#fff;padding:9px 14px;cursor:pointer}
+  button.big{font-size:16px;font-weight:700;padding:12px 18px}
+  button.in{background:#2f5d3b} button.out{background:#5d2f2f} button.save{background:var(--rosaTxt)}
+  button:disabled{opacity:.4;cursor:default}
+  .tc{font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;min-width:120px}
+  .pend{margin-top:10px;padding:10px 14px;border-radius:10px;background:#262424;border:1px dashed #666;font-size:14px}
+  .pend b{color:var(--oro)}
+  input[type=text]{width:100%;cursor:text}
+  aside{background:#262424;border-radius:12px;padding:12px}
+  aside h2{font-size:15px;margin-bottom:8px}
+  .seg{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:10px;background:#2f2d2d;margin-top:6px;border:2px solid transparent;cursor:pointer}
+  .seg.on{border-color:var(--oro)}
+  .seg .t{font-variant-numeric:tabular-nums;font-size:13px;min-width:120px;opacity:.9}
+  .seg .et{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:#444}
+  .seg .et.tieni{background:var(--verde)} .seg .et.scarta{background:var(--rosso)} .seg .et.camera{background:#6b5a1f}
+  .seg .note{font-size:13px;opacity:.85;flex:1}
+  .tot{font-size:13px;opacity:.8;margin-top:8px}
+  textarea{width:100%;min-height:160px;margin-top:8px;background:#111;color:#cfc;border:1px solid #444;border-radius:10px;padding:10px;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace}
+  .tasti{font-size:12px;opacity:.7;margin-top:10px;line-height:1.7}
+  kbd{background:#333;border:1px solid #666;border-bottom-width:2px;border-radius:5px;padding:1px 6px;font-family:inherit}
+</style>
+</head>
+<body>
+<header>
+  <h1>✂️ <em>Taglia-scene</em> · scegli i pezzi in cui parla chi racconta</h1>
+  <input type="file" id="file" accept="video/*,.mp4,.mov,.insv">
+  <span class="hint" id="nomeFile">Nessun file. Scegli il video originale (mp4/mov; gli .insv vanno prima esportati da Insta360 Studio).</span>
+</header>
+<main>
+  <section>
+    <video id="v" controls preload="metadata"></video>
+    <div class="bar">
+      <span class="tc" id="tc">00:00.0</span>
+      <button onclick="salta(-5)">−5 s</button><button onclick="salta(-1)">−1 s</button>
+      <button onclick="pausa()" class="big" id="btnPausa">⏯</button>
+      <button onclick="salta(1)">+1 s</button><button onclick="salta(5)">+5 s</button>
+      <button onclick="velocita()" id="btnVel" title="Velocità">1×</button>
+    </div>
+    <div class="bar">
+      <button class="big in" onclick="segnaIn()">⟦ Inizio (I)</button>
+      <button class="big out" onclick="segnaOut()">Fine (O) ⟧</button>
+      <select id="etichetta">
+        <option value="tieni">✅ Tieni: parla di vino / vendemmia / cantina</option>
+        <option value="scarta">❌ Scarta: chiacchiera fuori tema</option>
+        <option value="camera">🎥 Scarta: camera in movimento / deformato / segue chi filma</option>
+      </select>
+      <button class="big save" onclick="salva()" id="btnSalva" disabled>💾 Salva (Invio)</button>
+    </div>
+    <div class="pend" id="pend">Premi <b>I</b> all'inizio della scena e <b>O</b> alla fine, scegli l'etichetta, poi <b>Invio</b>.</div>
+    <input type="text" id="nota" placeholder="Nota (es. «spiega il mostimetro», «parla con Alessandro di…»)" style="margin-top:8px">
+    <div class="tasti">Tasti: <kbd>I</kbd> inizio · <kbd>O</kbd> fine · <kbd>Invio</kbd> salva · <kbd>Spazio</kbd>/<kbd>K</kbd> pausa · <kbd>J</kbd>/<kbd>L</kbd> −/+5 s · <kbd>←</kbd>/<kbd>→</kbd> −/+1 s · <kbd>,</kbd>/<kbd>.</kbd> un fotogramma · <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> etichetta · <kbd>Canc</kbd> elimina la scena selezionata</div>
+  </section>
+  <aside>
+    <h2>Scene segnate <span class="hint" id="nSeg"></span></h2>
+    <div id="lista"></div>
+    <div class="tot" id="tot"></div>
+    <div class="bar">
+      <button onclick="esporta('csv')">⬇ CSV</button>
+      <button onclick="esporta('ffmpeg')">⬇ comandi ffmpeg</button>
+      <button onclick="esporta('json')">⬇ JSON</button>
+      <button onclick="azzera()" style="margin-left:auto">🗑 Azzera</button>
+    </div>
+    <label class="hint" style="display:block;margin-top:10px">Rotazione 360 per i comandi (gradi v360 yaw, vuoto = nessuna; vedi docs/VENDEMMIA-RIMONTAGGIO.md)</label>
+    <input type="text" id="yaw" placeholder="es. -100" style="width:120px">
+    <textarea id="out" placeholder="Qui compare l'esportazione: copia e incolla." readonly></textarea>
+  </aside>
+</main>
+<script>
+const v=document.getElementById('v'), tc=document.getElementById('tc');
+let nome='', segs=[], pendIn=null, pendOut=null, sel=-1, vel=1;
+const fmt=(s)=>{ s=Math.max(0,s||0); const m=Math.floor(s/60), r=s-m*60; return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')+':'+r.toFixed(1).padStart(4,'0'); };
+const fmtB=(s)=>{ const m=Math.floor(s/60); return String(m).padStart(2,'0')+':'+(s-m*60).toFixed(1).padStart(4,'0'); };
+const chiave=()=>'tagliascene_'+nome;
+function carica(){ try{ segs=JSON.parse(localStorage.getItem(chiave())||'[]'); }catch(e){ segs=[]; } render(); }
+function salvaLS(){ try{ localStorage.setItem(chiave(),JSON.stringify(segs)); }catch(e){} }
+document.getElementById('file').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f)return;
+  nome=f.name; document.getElementById('nomeFile').textContent=nome+' · '+(f.size/1048576).toFixed(0)+' MB';
+  v.src=URL.createObjectURL(f); v.play().catch(()=>{}); pendIn=pendOut=null; sel=-1; carica(); aggPend();
+});
+v.addEventListener('timeupdate',()=>{ tc.textContent=fmtB(v.currentTime); });
+function pausa(){ if(v.paused)v.play(); else v.pause(); }
+function salta(d){ v.currentTime=Math.max(0,Math.min((v.duration||1e9),v.currentTime+d)); }
+function velocita(){ vel=vel===1?1.5:vel===1.5?2:vel===2?0.5:1; v.playbackRate=vel; document.getElementById('btnVel').textContent=vel+'×'; }
+function segnaIn(){ pendIn=v.currentTime; if(pendOut!=null&&pendOut<=pendIn)pendOut=null; aggPend(); }
+function segnaOut(){ pendOut=v.currentTime; if(pendIn==null||pendIn>=pendOut){ pendIn=Math.max(0,pendOut-10); } aggPend(); }
+function aggPend(){
+  const p=document.getElementById('pend'), b=document.getElementById('btnSalva');
+  if(pendIn==null&&pendOut==null){ p.innerHTML='Premi <b>I</b> all\'inizio della scena e <b>O</b> alla fine, scegli l\'etichetta, poi <b>Invio</b>.'; b.disabled=true; return; }
+  p.innerHTML='Scena in corso: <b>'+(pendIn!=null?fmtB(pendIn):'…')+'</b> → <b>'+(pendOut!=null?fmtB(pendOut):'…')+'</b>'+(pendIn!=null&&pendOut!=null?' ('+(pendOut-pendIn).toFixed(1)+' s)':'');
+  b.disabled=!(pendIn!=null&&pendOut!=null);
+}
+function salva(){
+  if(pendIn==null||pendOut==null)return;
+  segs.push({in:+pendIn.toFixed(2),out:+pendOut.toFixed(2),et:document.getElementById('etichetta').value,nota:document.getElementById('nota').value.trim()});
+  segs.sort((a,b)=>a.in-b.in); pendIn=pendOut=null; document.getElementById('nota').value=''; aggPend(); salvaLS(); render();
+}
+function elimina(i){ if(i<0||i>=segs.length)return; segs.splice(i,1); sel=-1; salvaLS(); render(); }
+function azzera(){ if(!segs.length||!confirm('Cancellare tutte le scene segnate per questo file?'))return; segs=[]; sel=-1; salvaLS(); render(); }
+function render(){
+  const L=document.getElementById('lista'); L.textContent='';
+  segs.forEach((s,i)=>{
+    const d=document.createElement('div'); d.className='seg'+(i===sel?' on':''); d.onclick=()=>{ sel=i; v.currentTime=s.in; v.play().catch(()=>{}); render(); };
+    const t=document.createElement('span'); t.className='t'; t.textContent=fmtB(s.in)+' → '+fmtB(s.out); d.appendChild(t);
+    const e=document.createElement('span'); e.className='et '+s.et; e.textContent=s.et==='tieni'?'TIENI':s.et==='camera'?'CAMERA':'SCARTA'; d.appendChild(e);
+    const n=document.createElement('span'); n.className='note'; n.textContent=s.nota||''; d.appendChild(n);
+    const x=document.createElement('button'); x.textContent='✕'; x.title='Elimina'; x.onclick=(ev)=>{ ev.stopPropagation(); elimina(i); }; d.appendChild(x);
+    L.appendChild(d);
+  });
+  const tieni=segs.filter(s=>s.et==='tieni'), tt=tieni.reduce((a,s)=>a+(s.out-s.in),0);
+  document.getElementById('nSeg').textContent=segs.length?('('+segs.length+')'):'';
+  document.getElementById('tot').textContent=segs.length?('Da tenere: '+tieni.length+' scene, '+fmtB(tt)+' in tutto'):'';
+}
+function esporta(tipo){
+  const base=(nome||'video').replace(/\.[^.]+$/,''), yaw=(document.getElementById('yaw').value||'').trim();
+  let out='';
+  if(tipo==='csv'){ out='file;inizio_s;fine_s;durata_s;etichetta;nota\n'+segs.map(s=>[nome,s.in,s.out,(s.out-s.in).toFixed(1),s.et,'"'+(s.nota||'').replace(/"/g,'""')+'"'].join(';')).join('\n'); }
+  else if(tipo==='json'){ out=JSON.stringify({file:nome,scene:segs},null,1); }
+  else {
+    const tieni=segs.filter(s=>s.et==='tieni');
+    out='# '+tieni.length+' scene da tenere di '+nome+(yaw?' · ricentratura v360 yaw='+yaw:'')+'\n';
+    tieni.forEach((s,i)=>{
+      const n=String(i+1).padStart(2,'0'), etic=(s.nota||'scena').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,40);
+      out+=yaw
+        ? 'ffmpeg -ss '+fmt(s.in)+' -to '+fmt(s.out)+' -i "'+nome+'" -vf "v360=e:e:yaw='+yaw+':interp=lanczos" -c:v libx264 -crf 18 -preset slow -c:a aac -movflags +faststart "'+base+'_'+n+'_'+etic+'.mp4"\n'
+        : 'ffmpeg -ss '+fmt(s.in)+' -to '+fmt(s.out)+' -i "'+nome+'" -c copy "'+base+'_'+n+'_'+etic+'.mp4"\n';
+    });
+    out+='\n# per unire più scene in un capitolo: crea lista.txt con righe  file \'nomefile.mp4\'  e poi\n# ffmpeg -f concat -safe 0 -i lista.txt -c copy capitolo.mp4\n';
+  }
+  document.getElementById('out').value=out;
+  const a=document.createElement('a'); a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(out); a.download=base+'_scene.'+(tipo==='csv'?'csv':tipo==='json'?'json':'sh'); a.click();
+}
+document.addEventListener('keydown',e=>{
+  if(e.target&&/input|textarea|select/i.test(e.target.tagName)){ if(e.key==='Enter'&&e.target.id==='nota'){ e.preventDefault(); salva(); e.target.blur(); } return; }
+  const k=e.key;
+  if(k==='i'||k==='I'){ segnaIn(); } else if(k==='o'||k==='O'){ segnaOut(); }
+  else if(k==='Enter'){ salva(); } else if(k===' '||k==='k'||k==='K'){ e.preventDefault(); pausa(); }
+  else if(k==='j'||k==='J'){ salta(-5); } else if(k==='l'||k==='L'){ salta(5); }
+  else if(k==='ArrowLeft'){ e.preventDefault(); salta(-1); } else if(k==='ArrowRight'){ e.preventDefault(); salta(1); }
+  else if(k===','){ v.pause(); salta(-1/30); } else if(k==='.'){ v.pause(); salta(1/30); }
+  else if(k==='1'||k==='2'||k==='3'){ document.getElementById('etichetta').selectedIndex=+k-1; }
+  else if(k==='Delete'||k==='Backspace'){ elimina(sel); }
+  else return;
+});
+</script>
+</body>
+</html>

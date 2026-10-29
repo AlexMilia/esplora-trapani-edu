@@ -25,11 +25,21 @@ app/            codice che va su Aruba in /project/edu/app/
   debug500.php    diagnostica di deploy — DA CANCELLARE dal server dopo l'uso
   dati/           config.example.php (modello), .htaccess (nega tutto dal web); a runtime: config.php, cache, log, rl/, live/
 deploy/         htaccess-project-edu.txt → va in /project/edu/.htaccess · righe-da-aggiungere-a-config.txt (Stripe)
-migrazioni/     migrazione_19 … 31 (singole) · migrazione_completa.sql (tutte insieme, idempotente) · replica.sql (schema di produzione per i test)
+migrazioni/     migrazione_19 … 32 (singole) · migrazione_completa.sql (tutte insieme, idempotente) · replica.sql (schema di produzione per i test)
+offline/        PACCHETTO OFFLINE per le scuole senza rete: player statico + dati.js + video locali (vedi offline/LEGGIMI-OFFLINE.md)
+strumenti/      taglia-scene.html: segna IN/OUT sui video originali ed esporta i comandi ffmpeg (rimontaggio vendemmia)
 test/           tutte le suite + mock Stripe/Supabase + lanciatori (vedi test/LEGGIMI-TEST.md)
-docs/           manuale tecnico, architettura, relazioni di deploy/audit, guida audio, manuale quiz live, relazione per la finanza agevolata
+docs/           manuale tecnico, architettura, relazioni di deploy/audit, guida audio, manuale quiz live, relazione per la finanza agevolata, VENDEMMIA-RIMONTAGGIO
 demo-vr/        demo offline per Meta Quest (A-Frame locale, video da Bunny o da demo-vr/video/)
 ```
+
+## Il player in classe: telecomando (v2.4)
+
+Durante la lezione compare in basso una barra con pulsanti grandi (⏮ lezione · ⏪ capitolo · −10 s ·
+**Play/Pausa** · +10 s · capitolo ⏩ · lezione ⏭ · ☰ Capitoli · ? Aiuto). Un **capitolo** è una clip della
+playlist (titolo dalla regia, campo 📑). Con un telecomando da presentazione basta il tasto **avanti**
+(PagGiù): chiude la scheda, apre la scoperta, passa al capitolo. Il pulsante **?** spiega tutto in una
+pagina. Si nasconde con 🎛 o con il tasto T.
 
 ## Far girare il progetto in locale
 
@@ -57,7 +67,9 @@ Senza il `config.php` reale (chiavi Supabase) il player si apre ma il menu resta
 | Migrazione 29 (RLS consolidata) | ❌ da applicare | Fase 1 audit |
 | Migrazione 30 (abbonamenti) + Stripe | ❌ da attivare | Fase 2, passi in `docs/LEGGIMI-FASE2-STRIPE.md` (prima chiavi di test) |
 | Migrazione 31 (elenco clienti per il catalogo) | ❌ da applicare | insieme a regia v17.1 (vedi `docs/CHANGELOG.md`) |
-| `app/` (api v5, player v2.3, regia v16.2) | ✅ dal 23/09 | regia v17.1 + stripe*.php ancora da caricare |
+| Migrazione 32 (titolo dei capitoli) | ❌ da applicare | insieme a player v2.4 + regia v17.2 (29/10, vedi `docs/CHANGELOG.md`) |
+| `app/` (api v5, player v2.3, regia v16.2) | ✅ dal 23/09 | player v2.4 (telecomando + offline), regia v17.2 + stripe*.php ancora da caricare |
+| Lezione `vendemmia-alagna` | stato **soon** dal 29/10 | era in bozza (per questo mancava); video da rimontare: `docs/VENDEMMIA-RIMONTAGGIO.md` |
 
 ## Regole di sicurezza (non negoziabili)
 
@@ -71,4 +83,4 @@ Senza il `config.php` reale (chiavi Supabase) il player si apre ma il menu resta
 
 `docs/MANUALE-TECNICO-PRESA-IN-CARICO.md` (+ PDF) · `docs/ARCHITETTURA-EDU-SAAS.md` · `docs/LEGGIMI-CATALOGO.md` ·
 `docs/AUDIT-FASE1.md` · `docs/LEGGIMI-FASE2-STRIPE.md` · `docs/GUIDA-AUDIO-GOCCIA.md` · `docs/MANUALE-QUIZ-LIVE.pdf` ·
-`docs/CHANGELOG.md` · `docs/relazione/` (relazione di progetto per il progettista di finanza agevolata) · `demo-vr/LEGGIMI-DEMO-VR.md`
+`docs/CHANGELOG.md` · `docs/VENDEMMIA-RIMONTAGGIO.md` · `offline/LEGGIMI-OFFLINE.md` · `docs/relazione/` (relazione di progetto per il progettista di finanza agevolata) · `demo-vr/LEGGIMI-DEMO-VR.md`

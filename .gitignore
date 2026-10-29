@@ -9,6 +9,16 @@ app/dati/rl/
 app/dati/live/*.json
 app/dati/log.txt
 
+# ---- pacchetto OFFLINE: solo dati.js e script sono versionati; video, media e copie del player NO ----
+offline/pacchetti/*/video/*
+!offline/pacchetti/*/video/.gitkeep
+offline/pacchetti/*/media/
+offline/pacchetti/*/lib/
+offline/pacchetti/*/index.html
+offline/pacchetti/*/avvia.js
+offline/pacchetti/*/AVVIA.bat
+offline/pacchetti/*/avvia.sh
+
 # ---- test ----
 node_modules/
 package-lock.json
