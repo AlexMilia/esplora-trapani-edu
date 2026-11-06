@@ -614,8 +614,8 @@
             i punti che brillano diventano le cose da cercare nel video, le parole chiave il glossario, il quiz le domande.
             Qui si scrive solo quello che il sistema non può dedurre. Una voce per riga.</p>
           <div class="grid2">
-            <div><label>Numero della scheda</label><input id="skN" type="number" min="0" max="20" placeholder="1"></div>
-            <div><label>Su quante schede in tutto</label><input id="skDi" type="number" min="0" max="20" placeholder="5"></div>
+            <div><label>Numero della scheda <span class="hint">(vuoto = lo calcola da sé)</span></label><input id="skN" type="number" min="0" max="20" placeholder="1"></div>
+            <div><label>Su quante schede in tutto <span class="hint">(vuoto = quante lezioni ha il corso)</span></label><input id="skDi" type="number" min="0" max="20" placeholder="5"></div>
           </div>
           <label>Domanda di apertura (prima del video; se vuota si usa quella della scheda didattica)</label>
           <input id="skPrima" placeholder="Secondo te, come si «raccoglie» il sale?">
@@ -634,7 +634,7 @@
           <label>Intervista a casa — tre domande da fare a un nonno o a un artigiano</label>
           <textarea id="skInt" rows="3" placeholder="Hai mai visto una salina da vicino? Cosa ricordi?"></textarea>
           <div class="grid2">
-            <div><label>Che cosa disegnare</label><input id="skDis" placeholder="il paluneddo o il palo a T"></div>
+            <div><label>Che cosa disegnare <span class="hint">(vuoto = il primo punto che brilla)</span></label><input id="skDis" placeholder="il paluneddo o il palo a T"></div>
             <div><label>Frasi vero/falso per la versione adattata (metti ! davanti a quelle false)</label>
                  <textarea id="skVF" rows="3" placeholder="Il munzeddu è un mucchio di sale.&#10;!Il sale cresce sugli alberi."></textarea></div>
           </div>
@@ -1250,7 +1250,6 @@ function schedaStato(){
   if(!s.fasi)m.push('fasi del lavoro');
   if(!s.territorio)m.push('domanda sul territorio');
   if(!s.intervista)m.push('intervista');
-  if(!s.disegno)m.push('disegno');
   if(!s.vero_falso)m.push('vero/falso (serve alla versione adattata)');
   $('skStato').textContent=m.length?('Mancano ancora: '+m.join(', ')):'Scheda completa.';
   $('skStato').style.color=m.length?'#8a6a2b':'#2f7d32';

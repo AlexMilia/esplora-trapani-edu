@@ -50,6 +50,13 @@ ORD2=$(curl -s "$U&tipo=standard&liv=junior" | grep -A1 'class="num"' | grep -oE
 ok "ristampando la scheda l'ordine resta identico (il docente ha la stessa copia)" "$([ "$ORD1" = "$ORD2" ] && echo 1)"
 ok "…e non è l'ordine giusto, altrimenti l'esercizio non esiste" "$([ "${ORD1%%,*}" != "Il salinaio rompe" ] && echo 1)"
 
+echo "— quello che la piattaforma deduce quando in regia non è scritto —"
+SN=$(curl -s "http://127.0.0.1:8096/scheda.php?c=esplora-trapani&lez=senzanum&tipo=standard&liv=junior")
+ok "numero della scheda dedotto dal posto nel corso (terza di sei)" "$(ha "$SN" "n. 3 di 6")"
+ok "che cosa disegnare: in mancanza, il primo punto che brilla nel video" "$(ha "$SN" "Disegna il munzeddu")"
+ok "…e la sezione del disegno viene stampata lo stesso" "$(ha "$SN" "a cosa serve")"
+ok "il numero scritto in regia vince su quello dedotto" "$(ha "$STD" "n. 1 di 5")"
+
 echo "— livello: primaria e medie —"
 ok "la versione primaria lo dichiara" "$(ha "$STD" "scuola primaria")"
 ok "la versione medie lo dichiara" "$(ha "$SEN" "secondaria di primo grado")"

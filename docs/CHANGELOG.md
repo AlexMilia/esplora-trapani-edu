@@ -1,5 +1,26 @@
 # Registro delle modifiche
 
+## 06/11/2026 (notte) — i testi delle schede entrano nelle lezioni (migrazione 33)
+
+Correzione di rotta sul lavoro di stasera: le schede si componevano dai dati della lezione, ma i **testi** dei cinque mestieri stavano ancora in file del codice (`contenuti/*.json`), letti solo dal mock dei test. In produzione quelle lezioni avevano `didattica.scheda` vuoto, quindi le schede sarebbero uscite incomplete, e soprattutto non c'era nulla da modificare in regia.
+
+### `migrazioni/migrazione_33_schede_contenuti.sql` (nuova)
+Porta i testi dei cinque mestieri dentro `edu_lezioni.didattica.scheda`, una volta sola. Da lì in poi si modificano **dalla regia**, come ogni altro contenuto della lezione.
+- **Non sovrascrive.** Se una lezione ha già una scheda, anche con un solo campo scritto in regia, viene lasciata com'è. Rilanciare il file non cambia niente.
+- **Ripetibile al contrario:** per tornare al testo di partenza di una lezione, si svuotano i campi in regia, si salva, si rilancia.
+- Trova la lezione **per slug** (più grafie possibili) e, se non la trova, **per titolo**. Guarda solo le lezioni originali, mai le copie dei docenti. Se una lezione non esiste ancora, lo dice e va avanti senza fallire.
+- Ogni passaggio stampa un `NOTICE`: *scheda riempita* / *ha già una scheda* / *nessuna lezione in archivio*, più un riepilogo finale e un avviso se una scheda è senza fasi o senza glossario.
+
+### Due cose in meno da scrivere a mano — `app/scheda.php`
+- **Numero della scheda.** Se `numero`/`di` non sono scritti in regia, li ricava dal posto che la lezione occupa nel corso (`edu_get_corsi`): una lezione nuova non obbliga più a rinumerare tutte le altre. Il valore scritto in regia vince sempre su quello dedotto.
+- **Che cosa disegnare.** Se il campo è vuoto, si disegna il primo punto che brilla nel video, con l'articolo portato in minuscolo perché la frase regge: «Disegna il munzeddu, e scrivi a cosa serve».
+
+### Regia
+Le etichette dicono che cosa succede lasciando vuoto un campo, e la riga di stato non chiede più il disegno fra le cose mancanti, visto che ora ha un ripiego.
+
+### Test
+`test/t_schede_seed.sql`, **16 verifiche** dentro `db_avvia.sh`: il seed riempie, non sovrascrive il lavoro fatto in regia, ricarica dopo uno svuotamento, trova la lezione per titolo quando lo slug è diverso, non tocca le copie dei docenti, e quello che scrive è davvero ciò che `scheda.php` legge. `t_scheda.sh` sale a **43 verifiche** con le due deduzioni nuove. Il giro completo sul database: 10 passi, 106 verifiche SQL.
+
 ## 06/11/2026 (sera) — le schede da stampare le genera la piattaforma
 
 Finora le schede alunno erano due file Word scritti a mano per un solo mestiere. Ora sono una pagina della piattaforma: il docente apre la lezione, preme 🖨️ e ha davanti la scheda di **quella** lezione, costruita dai dati che sono già in regia.

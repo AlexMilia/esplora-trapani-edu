@@ -12,10 +12,16 @@ Tempo: circa 30 minuti. Si può fare in un colpo solo insieme alle migrazioni 29
 
 SQL Editor → incolla **tutto** `migrazioni/migrazione_completa.sql` → Run.
 
-Il file contiene le migrazioni 19 → 32 ed è **idempotente**: le parti già applicate il 23/09 vengono
+Il file contiene le migrazioni 19 → 33 ed è **idempotente**: le parti già applicate il 23/09 vengono
 semplicemente salutate con un «già esiste, salto». Se preferisci andare per passi, esegui nell'ordine
 `migrazione_29_rls_consolidata.sql`, `migrazione_30_abbonamenti.sql`, `migrazione_31_elenco_clienti.sql`,
-`migrazione_32_didattica.sql`.
+`migrazione_32_didattica.sql`, `migrazione_33_schede_contenuti.sql`.
+
+La **33** è quella che mette i testi delle schede dentro le lezioni. Nei messaggi di Supabase, sotto il
+risultato, leggi una riga per mestiere: *«scheda riempita»*, *«ha già una scheda, lasciata com'è»* oppure
+*«nessuna lezione in archivio»*. Quest'ultima non è un errore: vuol dire che quella lezione non c'è ancora,
+e la sua scheda la scriverai in regia quando la creerai. **La 33 non sovrascrive mai**: una scheda che hai
+già modificato in regia resta intatta, anche rilanciando il file.
 
 > Se Supabase stampa un errore, **non ha cambiato nulla**: tutto il file viene annullato. Mandami l'errore
 > e lo correggo; non riprovare a pezzi, perché così perdi la garanzia dell'ordine.
@@ -23,6 +29,9 @@ semplicemente salutate con un «già esiste, salto». Se preferisci andare per p
 Alla fine, controllo rapido nello stesso editor:
 
 ```sql
+select slug, didattica->'scheda'->>'numero' as n_scheda from edu_lezioni
+ where owner is null and coalesce(didattica->'scheda','{}'::jsonb) <> '{}'::jsonb order by ordine;
+                                                                 -- le lezioni che hanno la scheda
 select count(*) from edu_esiti;                                  -- 0, la tabella c'è
 select count(*) from edu_compiti;                                -- 0
 select to_regprocedure('edu_salva_esito(jsonb)') is not null;    -- true

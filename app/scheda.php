@@ -89,6 +89,22 @@ $titoliHot = array_values(array_filter(array_map(function ($h) { return $h['tit'
 
 $numero   = (int)$valore('numero', 0);
 $diQuante = (int)$valore('di', 0);
+/* «Scheda n. 3 di 5»: se in regia non è stato scritto, lo dice il posto che la
+   lezione occupa nel corso. Così una lezione nuova non obbliga a rinumerare a
+   mano tutte le altre. Una sola chiamata in più, e solo quando serve. */
+if ($numero === 0 || $diQuante === 0) {
+  $corsi = supa_rpc('edu_get_corsi', ['p_cliente_slug' => $C]);
+  foreach (is_array($corsi) ? $corsi : [] as $co) {
+    $lez = isset($co['lezioni']) && is_array($co['lezioni']) ? $co['lezioni'] : [];
+    foreach ($lez as $i => $l2) {
+      if (isset($l2['id']) && $l2['id'] === $LEZ) {
+        if ($numero === 0)   $numero   = $i + 1;
+        if ($diQuante === 0) $diQuante = count($lez);
+        break 2;
+      }
+    }
+  }
+}
 $apertura = $valore('prima', isset($did['prima']) ? $did['prima'] : '');
 $trova    = (array)$valore('trova', array_slice($titoliHot, 0, 6));
 $distr    = (array)$valore('distrattori', []);
@@ -98,7 +114,13 @@ $territ   = $valore('territorio', '');
 $capacita = (array)$valore('capacita', ['Forza fisica', 'Pazienza', 'Precisione',
                                         'Conoscere il meteo', 'Lavoro di squadra', 'Creatività']);
 $intervis = (array)$valore('intervista', []);
-$disegno  = $valore('disegno', '');
+/* «Disegna …»: se in regia non si è scritto che cosa, si disegna il primo
+   punto che brilla nel video. La frase va in mezzo a un'altra, quindi
+   l'articolo iniziale va in minuscolo: «Disegna il munzeddu», non «Il». */
+$primoPunto = isset($titoliHot[0]) ? $titoliHot[0] : '';
+if ($primoPunto !== '' && preg_match('/^(Il|Lo|La|I|Gli|Le|L\'|L’|Un|Uno|Una) /u', $primoPunto))
+  $primoPunto = mb_strtolower(mb_substr($primoPunto, 0, 1)) . mb_substr($primoPunto, 1);
+$disegno  = $valore('disegno', $primoPunto);
 $veroFals = (array)$valore('vero_falso', []);
 $autoval  = (array)$valore('autovalutazione', [
   'So spiegare le fasi di questo mestiere',

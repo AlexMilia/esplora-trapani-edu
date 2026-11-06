@@ -27,12 +27,13 @@ app/            codice che va su Aruba in /project/edu/app/
   debug500.php    diagnostica di deploy — DA CANCELLARE dal server dopo l'uso
   dati/           config.example.php (modello), .htaccess (nega tutto dal web); a runtime: config.php, cache, log, rl/, live/
 deploy/         htaccess-project-edu.txt → va in /project/edu/.htaccess · righe-da-aggiungere-a-config.txt (Stripe)
-migrazioni/     migrazione_19 … 32 (singole) · migrazione_completa.sql (tutte insieme, idempotente) · replica.sql (schema di produzione per i test)
+migrazioni/     migrazione_19 … 33 (singole) · migrazione_completa.sql (tutte insieme, idempotente) · replica.sql (schema di produzione per i test)
 test/           tutte le suite + mock Stripe/Supabase + lanciatori (vedi test/LEGGIMI-TEST.md)
 docs/           manuale tecnico, architettura, relazioni di deploy/audit, guida audio, manuale quiz live, relazione per la finanza agevolata
   didattica/      UDA per il PTOF, guida docente, rubriche, prove di ingresso/uscita, protocollo della sperimentazione
   amministrativo/ nomina a responsabile del trattamento, informativa famiglie, dichiarazione di accessibilità, scheda tecnica, come ci si compra
-contenuti/      testi delle schede alunno, un file per mestiere (salinaio.json, corallaio.json, …)
+contenuti/      testi di partenza delle schede alunno, un file per mestiere: li carica in database la migr. 33,
+                poi si modificano dalla regia (qui restano solo come sorgente del seed e dei test)
 demo-vr/        demo offline per Meta Quest (A-Frame locale, video da Bunny o da demo-vr/video/)
 ```
 
@@ -74,7 +75,7 @@ Quello che trasforma la piattaforma da attività a strumento adottabile da una s
 - **Scheda della lezione per il docente.** Obiettivi per livello, traguardi del corso, prima/durante/dopo, materiali, collegamenti al libro: si compilano in regia (📚 Corsi e editor della lezione) e si aprono in aula col tasto 📋 del player.
 - **Compiti a casa.** `app/compito.php?k=CODICE`: clip da rivedere e domande; la correzione è server-side (`edu_compito_valuta`), le risposte giuste non raggiungono il dispositivo, l'esito rientra fra gli esiti della classe.
 - **Diario del percorso.** Il menu del player mostra alla classe cosa ha già fatto e con quale esito (`edu_diario_classe`, per codice classe).
-- **Schede alunno da stampare, generate dalla piattaforma.** `app/scheda.php?c=<cliente>&lez=<slug>&tipo=standard|adattata&liv=junior|senior`: HTML con `@page` A4, nessuna libreria PDF sul server. La **standard** sta in 2 facciate; l'**adattata per l'autismo** in 10 pagine (pagina per l'insegnante con le soluzioni, agenda visiva, una attività per pagina, tessere da ritagliare, carte AIUTO e PAUSA, carta del ruolo nel quiz in versione LIM e in versione telefoni). Tutto viene dai dati già in regia: hotspot → cose da cercare e glossario, tappe → fasi da riordinare, quiz → vero/falso, `didattica.scheda` → i testi del docente. Le fasi escono mescolate ma con ordine stabile, così ristampando si ha la stessa copia. Si apre col tasto 🖨️ del player o dal pannello **🖨️ Scheda da stampare** della regia. I testi dei cinque mestieri stanno in `contenuti/*.json`: il salinaio è definitivo, gli altri quattro sono bozze con la marcatura `[DA VERIFICARE SUI VIDEO]`.
+- **Schede alunno da stampare, generate dalla piattaforma.** `app/scheda.php?c=<cliente>&lez=<slug>&tipo=standard|adattata&liv=junior|senior`: HTML con `@page` A4, nessuna libreria PDF sul server. La **standard** sta in 2 facciate; l'**adattata per l'autismo** in 10 pagine (pagina per l'insegnante con le soluzioni, agenda visiva, una attività per pagina, tessere da ritagliare, carte AIUTO e PAUSA, carta del ruolo nel quiz in versione LIM e in versione telefoni). Tutto viene dai dati già in regia: hotspot → cose da cercare e glossario, tappe → fasi da riordinare, quiz → vero/falso, `didattica.scheda` → i testi del docente. Le fasi escono mescolate ma con ordine stabile, così ristampando si ha la stessa copia. Si apre col tasto 🖨️ del player o dal pannello **🖨️ Scheda da stampare** della regia. I testi dei cinque mestieri vivono **in database**, dentro la lezione: ce li mette la **migrazione 33** una volta sola, e da lì si modificano dalla regia come ogni altro contenuto (la 33 non sovrascrive mai una scheda già toccata). Quello che non è scritto lo deduce la piattaforma: il numero della scheda dal posto della lezione nel corso, il disegno dal primo punto che brilla. Il salinaio è definitivo, gli altri quattro sono bozze con la marcatura `[DA VERIFICARE SUI VIDEO]`.
 
 ## Regole di sicurezza (non negoziabili)
 

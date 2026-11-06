@@ -122,7 +122,15 @@ if ($p==='/rest/v1/rpc/edu_get_cliente') out($CLIENTE);
 if ($p==='/rest/v1/rpc/edu_get_corsi') out([[
   'id'=>'mestieri','uuid'=>'co-1','tit'=>'Antichi Mestieri','em'=>'🛠️','stato'=>'pubblicato','ordine'=>10,
   'origine'=>'proprio','didattica'=>['traguardi'=>['primaria'=>['riconosce le tracce del passato']],'uda'=>['monte_ore'=>14]],
-  'lezioni'=>[['id'=>'salinaio','tit'=>'Il salinaio','stato'=>'pubblicata']]]]);
+  /* l'elenco serve anche a scheda.php: quando in regia non si scrive il numero
+     della scheda, lo deduce dal posto che la lezione occupa qui dentro.
+     'senzanum' e' la lezione di prova senza numero scritto a mano: e' la terza di sei. */
+  'lezioni'=>[['id'=>'salinaio','tit'=>'Il salinaio','stato'=>'pubblicata'],
+              ['id'=>'corallaio','tit'=>'Il corallaio','stato'=>'pubblicata'],
+              ['id'=>'senzanum','tit'=>'Lezione senza numero','stato'=>'pubblicata'],
+              ['id'=>'tappeti','tit'=>'Il tessitore di tappeti ericini','stato'=>'pubblicata'],
+              ['id'=>'olive','tit'=>'La raccolta delle olive','stato'=>'pubblicata'],
+              ['id'=>'vendemmia','tit'=>'La vendemmia','stato'=>'pubblicata']]]]);
 if ($p==='/rest/v1/rpc/edu_classe_stato'){
   $cod=strtoupper($j['p_codice']??'');
   if($cod==='SCADUTA-1') out(['classe'=>$cod,'valida'=>false,'scuola'=>'IC Scaduto','scuola_id'=>'sc-9']);
@@ -168,10 +176,15 @@ if ($p==='/rest/v1/rpc/edu_get_lezione_tenant'){
   $fileCont = __DIR__.'/../../contenuti/'.preg_replace('/[^a-z]/','',$slug).'.json';
   $cont = (is_file($fileCont)) ? json_decode(file_get_contents($fileCont), true) : null;
   if($cont) unset($cont['_nota']);
+  /* 'senzanum': come il salinaio, ma senza numero/di/disegno scritti in regia.
+     Serve a provare che la piattaforma li deduce da sola. */
+  if($slug==='senzanum'){ $cont=json_decode(file_get_contents(__DIR__.'/../../contenuti/salinaio.json'),true);
+    unset($cont['_nota'],$cont['numero'],$cont['di'],$cont['disegno']); }
   if($slug!=='salinaio' && $slug!=='spoglia' && !$cont) out(null);     /* lezione inesistente */
   $conScheda = ($slug!=='spoglia');
   $TITOLI=['salinaio'=>'Il salinaio','corallaio'=>'Il corallaio','tappeti'=>'Il tessitore di tappeti ericini',
-           'olive'=>'La raccolta delle olive','vendemmia'=>'La vendemmia','spoglia'=>'Il salinaio'];
+           'olive'=>'La raccolta delle olive','vendemmia'=>'La vendemmia','spoglia'=>'Il salinaio',
+           'senzanum'=>'Lezione senza numero'];
   out([
   'id'=>$slug,'tit'=>($TITOLI[$slug]??'Lezione'),'sub'=>($slug==='salinaio'?'La salina tra Trapani e Paceco':''),'intro'=>'Guardate le vasche','coccio'=>null,
   'didattica'=>[
