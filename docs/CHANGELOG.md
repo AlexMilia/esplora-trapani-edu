@@ -1,5 +1,28 @@
 # Registro delle modifiche
 
+## 06/11/2026 (sera) — le schede da stampare le genera la piattaforma
+
+Finora le schede alunno erano due file Word scritti a mano per un solo mestiere. Ora sono una pagina della piattaforma: il docente apre la lezione, preme 🖨️ e ha davanti la scheda di **quella** lezione, costruita dai dati che sono già in regia.
+
+### `app/scheda.php` (nuovo)
+`scheda.php?c=<cliente>&lez=<slug>[&tipo=standard|adattata][&liv=junior|senior]` — HTML con `@page` A4, nessuna libreria PDF sul server: stampa e «salva come PDF» li fa il browser.
+
+- **Versione standard, 2 facciate.** Nove sezioni: domanda di ingresso, caccia agli oggetti dentro il video 360° (con un distrattore che nel video non c'è), fasi del lavoro da rimettere in ordine, glossario del mestiere, domanda sul territorio, intervista da fare a casa, disegno, autovalutazione, firme.
+- **Versione adattata (autismo), 10 pagine.** Pagina per l'insegnante (con le soluzioni, da non consegnare), agenda visiva delle cinque attività, una attività per pagina con un solo compito ciascuna, facce per l'autovalutazione, tessere da ritagliare, carte AIUTO e PAUSA, e la **carta del ruolo nel quiz in due versioni** — una se si gioca dalla LIM, una se si gioca dai telefoni — perché l'alunno sappia prima che cosa dovrà fare.
+- Tutto viene dai dati della lezione: hotspot → cose da cercare e glossario, tappe → fasi, quiz → vero/falso, `didattica.scheda` → i testi scritti dal docente. **Le fasi escono mescolate** (altrimenti l'esercizio non esiste) ma con un ordine stabile: ristampando si ottiene la stessa copia, e le soluzioni dell'insegnante restano valide.
+- Quando in regia manca qualcosa, la scheda **non si rompe**: avvisa in cima che è incompleta e stampa solo le sezioni che ha. Dove manca la foto compare un riquadro «Incolla qui un fotogramma».
+- Icone disegnate in SVG, non emoji: in bianco e nero restano nitide.
+
+### Dove si apre
+- **Player** (`app/index.php` v2.4): pulsante 🖨️ nella barra docente, accanto a 📋. Se non c'è una lezione aperta lo dice invece di aprire una pagina vuota.
+- **Regia** (`app/regia-edu` v18): pannello **🖨️ Scheda da stampare** — si sceglie cliente, lezione, livello e tipo, e si vede subito se quella lezione ha abbastanza dati.
+
+### Contenuti dei cinque mestieri — `contenuti/*.json`
+Il salinaio è trascritto dalle due schede cartacee già usate per il Pagoto. Gli altri quattro (corallaio, tappeti ericini, raccolta delle olive, vendemmia) sono **bozze** composte dalla guida docente: le frasi da controllare sul video portano la marcatura `[DA VERIFICARE SUI VIDEO]`, che si vede anche in stampa finché non viene tolta.
+
+### Test
+`test/t_scheda.sh`: 39 verifiche verdi — contenuto, ordine stabile delle fasi, livelli, le dieci pagine dell'adattata, i ripieghi quando mancano i dati, e la sicurezza (nessuna chiave nella pagina, `noindex`, solo anon key verso Supabase, nome della scuola nell'indirizzo che non inietta codice). Le ultime due verifiche stampano davvero con Playwright e contano le pagine del PDF.
+
 ## 06/11/2026 — blocco didattico (migrazione 32): la piattaforma diventa adottabile da una scuola
 
 Chiude i tre buchi che impedivano a un dirigente di comprare: l'evidenza valutativa, la continuità d'uso, la misurabilità.

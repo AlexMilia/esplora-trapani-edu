@@ -1,0 +1,83 @@
+{
+ "_nota": "Bozza composta dalla guida docente §3.2. Le voci con [DA VERIFICARE] vanno riscontrate sui video prima di stampare.",
+ "numero": 2,
+ "di": 5,
+ "prima": "Il corallo: è una pietra, una pianta o un animale? E che cosa ci si fa? Scrivi tre parole che ti vengono in mente.",
+ "trova": [
+  "Il banco di lavoro del corallaio",
+  "La lampada che illumina il banco",
+  "Un rametto di corallo grezzo",
+  "Un attrezzo per incidere [DA VERIFICARE SUI VIDEO]",
+  "Un oggetto finito in corallo"
+ ],
+ "distrattori": [
+  "Una rete da pesca"
+ ],
+ "fasi": [
+  "Il corallaio sceglie il rametto di corallo grezzo.",
+  "Taglia il pezzo della misura che gli serve.",
+  "Incide la forma con l'attrezzo, poco per volta. [DA VERIFICARE SUI VIDEO]",
+  "Liscia e lucida la superficie finché non brilla.",
+  "Monta il pezzo finito sull'oggetto (spillone, orecchino, oggetto sacro)."
+ ],
+ "glossario": [
+  {
+   "parola": "corallo"
+  },
+  {
+   "parola": "grezzo"
+  },
+  {
+   "parola": "bottega"
+  },
+  {
+   "parola": "incisione"
+  },
+  {
+   "parola": "lucidatura"
+  }
+ ],
+ "territorio": "Perché proprio Trapani è diventata famosa per il corallo? Pensa al mare, al porto e alle botteghe della città.",
+ "intervista": [
+  "In casa vostra c'è un oggetto di corallo? Chi ve l'ha dato?",
+  "Conosci qualcuno che lavorava il corallo o l'oro a Trapani?",
+  "Secondo te perché oggi restano poche botteghe?"
+ ],
+ "disegno": "l'oggetto finito che ti è piaciuto di più",
+ "vero_falso": [
+  {
+   "f": "Il corallo viene dal mare.",
+   "v": true
+  },
+  {
+   "f": "Il corallaio lavora con attrezzi piccoli.",
+   "v": true
+  },
+  {
+   "f": "Il corallo grezzo è già lucido.",
+   "v": false
+  },
+  {
+   "f": "A Trapani si lavorava il corallo.",
+   "v": true
+  }
+ ],
+ "adattata": {
+  "trova4": [
+   "Il banco di lavoro",
+   "La lampada",
+   "Il corallo grezzo",
+   "L'oggetto finito"
+  ],
+  "fasi3": [
+   "Scelgo il corallo grezzo.",
+   "Lo lavoro con l'attrezzo.",
+   "Lo lucido finché brilla."
+  ],
+  "parole": [
+   "corallo",
+   "bottega",
+   "attrezzo"
+  ]
+ }
+}

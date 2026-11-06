@@ -1,0 +1,83 @@
+{
+ "_nota": "Bozza composta dalla guida docente §3.4. Girato di fine ottobre 2026, da montare: strumenti, varietà e tempi vanno presi dal video.",
+ "numero": 4,
+ "di": 5,
+ "prima": "L'olio che mettiamo sul pane: quante mani ci sono passate prima di arrivare in bottiglia? Scrivi tre parole.",
+ "trova": [
+  "Le reti stese sotto l'albero",
+  "Il rastrello o l'abbacchiatore [DA VERIFICARE SUI VIDEO]",
+  "Le cassette con le olive",
+  "L'uliveto in fila",
+  "Il frantoio"
+ ],
+ "distrattori": [
+  "Un trattore che ara"
+ ],
+ "fasi": [
+  "Si stendono le reti sotto l'albero.",
+  "Si fanno cadere le olive dai rami.",
+  "Si raccolgono le olive nelle cassette, togliendo foglie e rametti.",
+  "Le olive vanno al frantoio il prima possibile. [DA VERIFICARE SUI VIDEO: entro quante ore]",
+  "Al frantoio le olive vengono macinate e si ottiene l'olio."
+ ],
+ "glossario": [
+  {
+   "parola": "uliveto"
+  },
+  {
+   "parola": "rete"
+  },
+  {
+   "parola": "frantoio"
+  },
+  {
+   "parola": "molitura"
+  },
+  {
+   "parola": "resa"
+  }
+ ],
+ "territorio": "Perché l'olivo cresce bene qui e non dappertutto? Pensa al clima, al sole e alla pioggia.",
+ "intervista": [
+  "In famiglia qualcuno ha raccolto le olive? Dove e quando?",
+  "Comprate l'olio o ve lo fate? Da chi?",
+  "Qual è la differenza fra l'olio del frantoio e quello del supermercato, secondo chi intervisti?"
+ ],
+ "disegno": "un ramo d'olivo con le olive e la rete sotto",
+ "vero_falso": [
+  {
+   "f": "L'olio si fa con le olive.",
+   "v": true
+  },
+  {
+   "f": "Le reti servono a raccogliere le olive che cadono.",
+   "v": true
+  },
+  {
+   "f": "Le olive si possono lasciare un mese nelle cassette.",
+   "v": false
+  },
+  {
+   "f": "Il frantoio macina le olive.",
+   "v": true
+  }
+ ],
+ "adattata": {
+  "trova4": [
+   "L'albero di olivo",
+   "La rete",
+   "Le olive",
+   "La cassetta"
+  ],
+  "fasi3": [
+   "Stendo la rete.",
+   "Faccio cadere le olive.",
+   "Porto le olive al frantoio."
+  ],
+  "parole": [
+   "oliva",
+   "rete",
+   "frantoio"
+  ]
+ }
+}

@@ -1,0 +1,83 @@
+{
+ "_nota": "Bozza composta dalla guida docente §3.3. Girato del 20/10/2026 con Franca Vario. I nomi delle parti del telaio e del motivo vanno presi dal video.",
+ "numero": 3,
+ "di": 5,
+ "prima": "Un tappeto: come si fa un disegno con dei fili? E quanto tempo ci vorrà? Scrivi tre parole.",
+ "trova": [
+  "Il telaio",
+  "I fili dell'ordito, tesi",
+  "La spola o la navetta [DA VERIFICARE SUI VIDEO]",
+  "Il motivo che si ripete",
+  "Il tappeto già cominciato"
+ ],
+ "distrattori": [
+  "Una macchina da cucire"
+ ],
+ "fasi": [
+  "Si tendono i fili dell'ordito sul telaio.",
+  "Si passa il filo della trama fra i fili tesi.",
+  "Si batte la trama per stringere il tessuto. [DA VERIFICARE SUI VIDEO]",
+  "Il motivo cresce riga dopo riga, sempre uguale.",
+  "Si taglia il tappeto dal telaio e si rifiniscono i bordi."
+ ],
+ "glossario": [
+  {
+   "parola": "telaio"
+  },
+  {
+   "parola": "trama"
+  },
+  {
+   "parola": "ordito"
+  },
+  {
+   "parola": "modulo"
+  },
+  {
+   "parola": "motivo"
+  }
+ ],
+ "territorio": "Perché questo tappeto si chiama «ericino»? Che cosa lega un oggetto al luogo dove si fa?",
+ "intervista": [
+  "In casa avete un tappeto o una coperta fatti a mano? Chi li ha fatti?",
+  "Qualcuno in famiglia sa cucire, ricamare o tessere? Chi glielo ha insegnato?",
+  "Secondo te, perché oggi pochissime persone sanno fare questo lavoro?"
+ ],
+ "disegno": "il motivo del tappeto, ripetuto almeno tre volte",
+ "vero_falso": [
+  {
+   "f": "Il tappeto si fa sul telaio.",
+   "v": true
+  },
+  {
+   "f": "Il motivo si ripete sempre uguale.",
+   "v": true
+  },
+  {
+   "f": "Per fare un tappeto ci vuole un'ora.",
+   "v": false
+  },
+  {
+   "f": "I fili tesi si chiamano ordito.",
+   "v": true
+  }
+ ],
+ "adattata": {
+  "trova4": [
+   "Il telaio",
+   "I fili",
+   "Il motivo",
+   "Il tappeto"
+  ],
+  "fasi3": [
+   "Metto i fili sul telaio.",
+   "Passo il filo fra i fili.",
+   "Il disegno cresce."
+  ],
+  "parole": [
+   "telaio",
+   "trama",
+   "motivo"
+  ]
+ }
+}

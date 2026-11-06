@@ -361,6 +361,7 @@ window.EDU_BASE = <?php echo json_encode(rtrim(dirname($_SERVER['SCRIPT_NAME'] ?
   <button class="tbtn" onclick="prossimaTappa()" aria-label="Prossima scoperta">⏭<span class="lbl"> Prossima scoperta</span></button>
   <button class="tbtn" id="btnElenco" onclick="apriElenco()" aria-label="Elenco delle scoperte">📖</button>
   <button class="tbtn" id="btnScheda" onclick="apriScheda()" aria-label="Scheda della lezione per il docente" title="Scheda della lezione (per il docente)">📋</button>
+  <button class="tbtn" id="btnStampa" onclick="apriStampabile()" aria-label="Scheda da stampare per la classe" title="Scheda da stampare per la classe">🖨️</button>
   <button class="tbtn" id="btnDSA" onclick="toggleDSA()" aria-label="Alta leggibilità" title="Alta leggibilità">Aa</button>
   <button class="tbtn" id="btnCC" onclick="toggleCCMenu()" aria-label="Sottotitoli">CC</button>
   <button class="tbtn" id="tbLive" style="display:none" onclick="quizLive()" aria-label="Quiz live con i dispositivi degli alunni" title="Quiz live: PIN sui dispositivi degli alunni">🎮<span class="lbl"> Quiz live</span></button>
@@ -1279,7 +1280,7 @@ function updNav(){
   /* i comandi che agiscono sulla lezione non devono sembrare cliccabili quando
      siamo nel menu: in aula il docente ci prova e non capisce perché non succede nulla */
   const inLezione=!!LEZ&&started;
-  ['btnIndietro','btnPausa','btnAvanti','btnElenco','btnScheda'].forEach(id=>{
+  ['btnIndietro','btnPausa','btnAvanti','btnElenco','btnScheda','btnStampa'].forEach(id=>{
     const b=document.getElementById(id); if(b)b.disabled=!inLezione;
   });
   document.querySelectorAll('.teachbar .tbtn').forEach(b=>{ b.style.opacity=b.disabled?.35:1; });
@@ -1312,6 +1313,13 @@ function apriScheda(){
   box.innerHTML=righe.join('');
   try{vid.pause();}catch(e){} updPausaBtn();
   document.getElementById('scheda').classList.add('on');
+}
+/* la scheda di carta per la classe: si apre in una pagina a parte, pronta da stampare (migr. 32) */
+function apriStampabile(){
+  if(!LEZ){ say('Aprite prima una lezione: la scheda da stampare è quella della lezione.',true); return; }
+  const u=(window.EDU_BASE||'')+'scheda.php?c='+encodeURIComponent(window.EDU_C||'')
+        +'&lez='+encodeURIComponent(LEZ.id)+'&liv='+LIVELLO+'&tipo=standard';
+  window.open(u,'_blank','noopener');
 }
 function chiudiScheda(){
   document.getElementById('scheda').classList.remove('on');

@@ -9,6 +9,7 @@ npm test                    # player + regia + analisi statica (15 suite, 281 ve
 bash test/t_api26.sh        # api.php offline (cache precompilata, server PHP integrato)
 bash test/t_didattica_api.sh # esiti, diario, compiti su un Supabase finto (30 verifiche)
 bash test/t_live_gc.sh      # le stanze del quiz live spariscono dopo 3 ore (privacy dichiarata)
+bash test/t_scheda.sh       # scheda alunno standard e adattata, contenuto + stampa A4 (39 verifiche)
 bash test/t_stripe_avvia.sh # stripe.php + webhook + setup contro Stripe/Supabase finti (28 verifiche)
 DBURL=postgresql://utente:password@127.0.0.1/edu_test bash test/db_avvia.sh   # migrazioni + RLS + flussi (vedi sotto)
 ```
@@ -26,6 +27,7 @@ DBURL=postgresql://utente:password@127.0.0.1/edu_test bash test/db_avvia.sh   # 
 | DB | `db_avvia.sh` | ricrea `edu_test` da `migrazioni/replica.sql` (replica dello schema di produzione), applica `migrazione_completa.sql` **due volte** (idempotenza), carica `fixture_test.sql`, poi `t_rls_matrice.sql` (ruoli × tabelle × operazioni: deve stampare zero scostamenti), `t_flusso_tenant.sql` (nuovo tenant end-to-end con RLS attiva), `t_abbonamenti.sql` (ciclo di vita dell'abbonamento via eventi), `t_didattica.sql` (esiti, diario, compiti e permessi della migrazione 32) |
 | Live | `t_live_flussi.sh`, `stress-live.js N stanze secondi` | casi limite del quiz live e carico (500 alunni) |
 | Privacy del live | `t_live_gc.sh` | le stanze con i soprannomi degli alunni vengono davvero cancellate dopo 3 ore (è ciò che l'informativa alle famiglie dichiara), e le partite in corso non vengono toccate |
+| Schede da stampare | `t_scheda.sh` | `scheda.php` contro `mock/supa-edu-mock.php`: contenuto preso dai dati della lezione, fasi mescolate ma **stabili fra una stampa e l'altra**, livelli primaria/medie, le dieci pagine dell'adattata (comprese le due carte del ruolo nel quiz, LIM e telefoni), i ripieghi quando la lezione è incompleta, e la sicurezza (nessuna chiave nella pagina, `noindex`, solo anon key, nome della scuola nell'indirizzo che non inietta codice). Le ultime due verifiche stampano davvero con Playwright e contano le pagine del PDF: 2 per la standard, 10 per l'adattata |
 
 ## Test che richiedono Apache
 

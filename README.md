@@ -21,6 +21,7 @@ app/            codice che va su Aruba in /project/edu/app/
   live.php        quiz live (stanze su file in dati/live/), live-lim.js (LIM), rispondi.php (telefoni)
   regia-edu.php   regia (identica a regia-edu.html, ma URL/chiave Supabase letti da dati/config.php)
   compito.php     compito a casa: clip da rivedere + domande, corrette dal server
+  scheda.php      scheda alunno da stampare (A4, standard e adattata per l'autismo), generata dai dati della lezione
   attiva.php      modulo pubblico «richiedi l'attivazione» → edu_richieste
   stripe.php / stripe-webhook.php / stripe-setup.php   abbonamenti (Fase 2)
   debug500.php    diagnostica di deploy — DA CANCELLARE dal server dopo l'uso
@@ -31,6 +32,7 @@ test/           tutte le suite + mock Stripe/Supabase + lanciatori (vedi test/LE
 docs/           manuale tecnico, architettura, relazioni di deploy/audit, guida audio, manuale quiz live, relazione per la finanza agevolata
   didattica/      UDA per il PTOF, guida docente, rubriche, prove di ingresso/uscita, protocollo della sperimentazione
   amministrativo/ nomina a responsabile del trattamento, informativa famiglie, dichiarazione di accessibilità, scheda tecnica, come ci si compra
+contenuti/      testi delle schede alunno, un file per mestiere (salinaio.json, corallaio.json, …)
 demo-vr/        demo offline per Meta Quest (A-Frame locale, video da Bunny o da demo-vr/video/)
 ```
 
@@ -72,6 +74,7 @@ Quello che trasforma la piattaforma da attività a strumento adottabile da una s
 - **Scheda della lezione per il docente.** Obiettivi per livello, traguardi del corso, prima/durante/dopo, materiali, collegamenti al libro: si compilano in regia (📚 Corsi e editor della lezione) e si aprono in aula col tasto 📋 del player.
 - **Compiti a casa.** `app/compito.php?k=CODICE`: clip da rivedere e domande; la correzione è server-side (`edu_compito_valuta`), le risposte giuste non raggiungono il dispositivo, l'esito rientra fra gli esiti della classe.
 - **Diario del percorso.** Il menu del player mostra alla classe cosa ha già fatto e con quale esito (`edu_diario_classe`, per codice classe).
+- **Schede alunno da stampare, generate dalla piattaforma.** `app/scheda.php?c=<cliente>&lez=<slug>&tipo=standard|adattata&liv=junior|senior`: HTML con `@page` A4, nessuna libreria PDF sul server. La **standard** sta in 2 facciate; l'**adattata per l'autismo** in 10 pagine (pagina per l'insegnante con le soluzioni, agenda visiva, una attività per pagina, tessere da ritagliare, carte AIUTO e PAUSA, carta del ruolo nel quiz in versione LIM e in versione telefoni). Tutto viene dai dati già in regia: hotspot → cose da cercare e glossario, tappe → fasi da riordinare, quiz → vero/falso, `didattica.scheda` → i testi del docente. Le fasi escono mescolate ma con ordine stabile, così ristampando si ha la stessa copia. Si apre col tasto 🖨️ del player o dal pannello **🖨️ Scheda da stampare** della regia. I testi dei cinque mestieri stanno in `contenuti/*.json`: il salinaio è definitivo, gli altri quattro sono bozze con la marcatura `[DA VERIFICARE SUI VIDEO]`.
 
 ## Regole di sicurezza (non negoziabili)
 

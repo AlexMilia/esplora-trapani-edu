@@ -1,0 +1,83 @@
+{
+ "_nota": "Bozza composta dalla guida docente §3.5. Girato alla Cantina Alagna con Ercole Alagna, 6 lezioni approvate. È l'ultimo mestiere del percorso: la scheda chiude anche con il confronto fra i cinque mestieri.",
+ "numero": 5,
+ "di": 5,
+ "prima": "L'uva si raccoglie e poi? Chi decide qual è il giorno giusto? Scrivi tre parole.",
+ "trova": [
+  "I filari della vigna",
+  "Un grappolo maturo",
+  "La forbice da vendemmia",
+  "La cassetta dell'uva",
+  "La cantina con le vasche [DA VERIFICARE SUI VIDEO]"
+ ],
+ "distrattori": [
+  "Un albero di limoni"
+ ],
+ "fasi": [
+  "Si controlla l'uva per decidere il giorno giusto.",
+  "Si taglia il grappolo con la forbice e si mette nella cassetta.",
+  "L'uva arriva in cantina in giornata.",
+  "L'uva viene pigiata e comincia la fermentazione. [DA VERIFICARE SUI VIDEO]",
+  "Il mosto diventa vino e riposa."
+ ],
+ "glossario": [
+  {
+   "parola": "vigneto"
+  },
+  {
+   "parola": "filare"
+  },
+  {
+   "parola": "grappolo"
+  },
+  {
+   "parola": "vendemmia"
+  },
+  {
+   "parola": "fermentazione"
+  }
+ ],
+ "territorio": "Perché la vite sta bene in questa terra? E perché il vino prende il nome del posto in cui nasce?",
+ "intervista": [
+  "In famiglia qualcuno ha fatto la vendemmia? Racconta com'era.",
+  "Si faceva il vino in casa? Chi e come?",
+  "Che differenza c'è, per chi intervisti, fra la vendemmia di una volta e quella di oggi?"
+ ],
+ "disegno": "un filare con i grappoli, e la cassetta piena",
+ "vero_falso": [
+  {
+   "f": "Il vino si fa con l'uva.",
+   "v": true
+  },
+  {
+   "f": "L'uva si raccoglie in estate o in autunno.",
+   "v": true
+  },
+  {
+   "f": "La vendemmia si fa quando si vuole.",
+   "v": false
+  },
+  {
+   "f": "L'uva arriva in cantina il giorno stesso.",
+   "v": true
+  }
+ ],
+ "adattata": {
+  "trova4": [
+   "La vigna",
+   "Il grappolo",
+   "La forbice",
+   "La cassetta"
+  ],
+  "fasi3": [
+   "Taglio il grappolo.",
+   "Riempio la cassetta.",
+   "Porto l'uva in cantina."
+  ],
+  "parole": [
+   "uva",
+   "grappolo",
+   "cantina"
+  ]
+ }
+}

@@ -4,6 +4,104 @@
    edu_diario_classe · edu_compito_apri · edu_compito_valuta.
    Registra tutto ciò che riceve in /tmp/supa-edu-state.json, così il test
    può controllare COSA è arrivato al database, non solo la risposta. */
+define('SCHEDA_SALINAIO', json_decode(<<<'J'
+{
+ "numero": 1,
+ "di": 5,
+ "prima": "Secondo te, come si «raccoglie» il sale? Scrivi tre parole che ti vengono in mente pensando a una salina.",
+ "trova": [
+  "Il palo a forma di T",
+  "Il fondo di argilla",
+  "Il paluneddo, la pala del salinaio",
+  "Un munzeddu, il cumulo di sale",
+  "La crosta di sale nella vasca"
+ ],
+ "distrattori": [
+  "Un mulino a vento"
+ ],
+ "fasi": [
+  "Il salinaio rompe la crosta di sale con il palo a T.",
+  "Raccoglie il sale con il paluneddo, senza toccare l'argilla del fondo.",
+  "Controlla la punta della pala: se resta bianca, il sale è puro.",
+  "Porta il sale fuori dalla vasca e forma il munzeddu.",
+  "Il munzeddu asciuga e si copre di una crosta naturale che lo protegge dalla pioggia."
+ ],
+ "glossario": [
+  {
+   "parola": "munzeddu"
+  },
+  {
+   "parola": "paluneddo"
+  },
+  {
+   "parola": "crosta di sale"
+  },
+  {
+   "parola": "argilla"
+  },
+  {
+   "parola": "vasca salante"
+  }
+ ],
+ "territorio": "Perché le saline sono proprio sulla costa tra Trapani e Marsala? Pensa al mare, al sole e al vento.",
+ "capacita": [
+  "Forza fisica",
+  "Pazienza",
+  "Precisione",
+  "Conoscere il meteo",
+  "Lavoro di squadra",
+  "Creatività"
+ ],
+ "intervista": [
+  "Hai mai visto una salina da vicino? Cosa ricordi?",
+  "Conosci qualcuno che ha lavorato in salina o nel commercio del sale?",
+  "Perché, secondo te, il sale di Trapani è famoso?"
+ ],
+ "disegno": "il paluneddo o il palo a T",
+ "vero_falso": [
+  {
+   "f": "Il munzeddu è un mucchio di sale.",
+   "v": true
+  },
+  {
+   "f": "Il palo a T rompe la crosta di sale.",
+   "v": true
+  },
+  {
+   "f": "Il sale si fa con l'acqua del mare.",
+   "v": true
+  },
+  {
+   "f": "Il sale cresce sugli alberi.",
+   "v": false
+  }
+ ],
+ "autovalutazione": [
+  "So spiegare le fasi di questo mestiere",
+  "Conosco almeno tre parole del mestiere",
+  "Ho lavorato bene con la mia squadra"
+ ],
+ "adattata": {
+  "trova4": [
+   "Il munzeddu",
+   "La vasca con il sale",
+   "Il palo a T",
+   "La pala"
+  ],
+  "fasi3": [
+   "Rompo la crosta di sale con il palo a T.",
+   "Raccolgo il sale con la pala.",
+   "Faccio il munzeddu."
+  ],
+  "parole": [
+   "munzeddu",
+   "pala",
+   "vasca"
+  ]
+ }
+}
+J
+, true));
 $F='/tmp/supa-edu-state.json';
 $S=@json_decode(@file_get_contents($F),true) ?: ['log'=>[],'esiti'=>[]];
 $m=$_SERVER['REQUEST_METHOD'];
@@ -63,23 +161,43 @@ if ($p==='/rest/v1/rpc/edu_compito_valuta'){
   $S['esiti'][]=['modalita'=>'compito','classe'=>$j['p_classe']??'','n_giuste'=>$n,'n_domande'=>count($giuste),'risposte'=>$r];
   out(['ok'=>true,'n_domande'=>count($giuste),'n_giuste'=>$n,'esito'=>$es]);
 }
-if ($p==='/rest/v1/rpc/edu_get_lezione_tenant') out([
-  'id'=>'salinaio','tit'=>'Il salinaio','intro'=>'Guardate le vasche','coccio'=>null,
+if ($p==='/rest/v1/rpc/edu_get_lezione_tenant'){
+  $slug=$j['p_lezione_slug']??'';
+  /* i contenuti veri dei mestieri, se ci sono, stanno in contenuti/{slug}.json:
+     così con lo stesso mock si generano le schede di tutti e cinque */
+  $fileCont = __DIR__.'/../../contenuti/'.preg_replace('/[^a-z]/','',$slug).'.json';
+  $cont = (is_file($fileCont)) ? json_decode(file_get_contents($fileCont), true) : null;
+  if($cont) unset($cont['_nota']);
+  if($slug!=='salinaio' && $slug!=='spoglia' && !$cont) out(null);     /* lezione inesistente */
+  $conScheda = ($slug!=='spoglia');
+  $TITOLI=['salinaio'=>'Il salinaio','corallaio'=>'Il corallaio','tappeti'=>'Il tessitore di tappeti ericini',
+           'olive'=>'La raccolta delle olive','vendemmia'=>'La vendemmia','spoglia'=>'Il salinaio'];
+  out([
+  'id'=>$slug,'tit'=>($TITOLI[$slug]??'Lezione'),'sub'=>($slug==='salinaio'?'La salina tra Trapani e Paceco':''),'intro'=>'Guardate le vasche','coccio'=>null,
   'didattica'=>[
     'obiettivi'=>['primaria'=>['descrive il lavoro del salinaio con parole sue','riconosce gli attrezzi del mestiere'],
                   'medie'=>['spiega il ciclo di produzione del sale']],
     'parole_chiave'=>['salina','vasca salante','pala','cristallizzazione'],
     'prima'=>'Chiedere alla classe da dove arriva il sale che hanno in cucina. Raccogliere tre ipotesi alla lavagna.',
-    'durante'=>'Fermare il video quando il salinaio solleva la pala: far descrivere il gesto e il peso. Aprire la scoperta sulle vasche.',
+    'durante'=>'Fermare il video quando il salinaio solleva la pala: far descrivere il gesto e il peso.',
     'dopo'=>'Disegnare la vasca salante e nominarne le parti con le parole chiave.',
     'materiali'=>['quaderno','sale grosso da toccare'],
-    'collegamenti'=>'Storia, cap. 3 — il lavoro dell uomo e il paesaggio'],
-  'corso'=>['id'=>'mestieri','uuid'=>'co-1','tit'=>'Antichi Mestieri','prologo'=>null,'mascotte'=>[],
+    'collegamenti'=>'Storia, cap. 3 — il lavoro dell uomo e il paesaggio',
+    'scheda'=>$conScheda?($cont?:SCHEDA_SALINAIO):[]],
+  'corso'=>['id'=>'mestieri','uuid'=>'co-1','tit'=>'Antichi Mestieri di Trapani','prologo'=>null,'mascotte'=>[],
     'didattica'=>['traguardi'=>['primaria'=>['riconosce le tracce del passato nel territorio'],'medie'=>['usa fonti materiali']],
                   'discipline'=>['storia','geografia']]],
-  'video'=>[['guid'=>'g-sal']],'tappe'=>[],
+  'video'=>[['guid'=>'g-sal']],
+  'tappe'=>[
+    ['v'=>0,'t'=>12,'hotspots'=>[
+      ['yaw'=>10,'pitch'=>0,'em'=>'🧂','tit'=>'Il munzeddu','txt'=>'Il cumulo di sale appena raccolto.','foto'=>'https://vz-bedaaab5-085.b-cdn.net/g-sal/thumbnail.jpg'],
+      ['yaw'=>80,'pitch'=>0,'em'=>'🔨','tit'=>'Il palo a T','txt'=>'Serve a rompere la crosta di sale.','foto'=>'']]],
+    ['v'=>0,'t'=>48,'hotspots'=>[
+      ['yaw'=>-30,'pitch'=>-5,'em'=>'🥄','tit'=>'La pala','txt'=>'Si chiama paluneddo.','foto'=>''],
+      ['yaw'=>120,'pitch'=>0,'em'=>'💧','tit'=>'La vasca con il sale','txt'=>'La vasca salante, dove il sale cristallizza.','foto'=>'']]]],
   'quiz'=>[['q'=>'Come si chiama la vasca dove cristallizza il sale?','opts'=>['Vasca salante','Vasca fredda'],'ok'=>0]],
   'quiz2'=>null]);
+}
 if ($p==='/rest/v1/rpc/edu_get_mascotte') out([]);
 if ($p==='/rest/v1/edu_eventi') out([],201);
 out(['message'=>'mock: rotta non gestita '.$p],404);

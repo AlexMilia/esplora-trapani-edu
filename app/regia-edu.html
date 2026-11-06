@@ -607,6 +607,52 @@
           <div style="margin-top:10px"><button class="btn rosa" onclick="salvaMeta()">Salva scheda didattica</button></div>
         </div>
 
+        <!-- SCHEDA DA STAMPARE (migr. 32) -->
+        <div class="card">
+          <h2>🖨️ Scheda da stampare</h2>
+          <p class="hint">La scheda di carta per la classe si <b>compone da sola</b> con quello che c'è già nella lezione:
+            i punti che brillano diventano le cose da cercare nel video, le parole chiave il glossario, il quiz le domande.
+            Qui si scrive solo quello che il sistema non può dedurre. Una voce per riga.</p>
+          <div class="grid2">
+            <div><label>Numero della scheda</label><input id="skN" type="number" min="0" max="20" placeholder="1"></div>
+            <div><label>Su quante schede in tutto</label><input id="skDi" type="number" min="0" max="20" placeholder="5"></div>
+          </div>
+          <label>Domanda di apertura (prima del video; se vuota si usa quella della scheda didattica)</label>
+          <input id="skPrima" placeholder="Secondo te, come si «raccoglie» il sale?">
+          <div class="grid2">
+            <div><label>Cose da cercare nel video (vuoto = i punti che brillano)</label><textarea id="skTrova" rows="3" placeholder="Il palo a forma di T&#10;Il fondo di argilla"></textarea></div>
+            <div><label>Cose che NON ci sono (per far ragionare)</label><textarea id="skDistr" rows="3" placeholder="Un mulino a vento"></textarea></div>
+          </div>
+          <label>Fasi del lavoro, nell'ordine giusto (la scheda le stampa mescolate)</label>
+          <textarea id="skFasi" rows="4" placeholder="Il salinaio rompe la crosta di sale con il palo a T.&#10;Raccoglie il sale con il paluneddo."></textarea>
+          <div class="grid2">
+            <div><label>Parole del mestiere (vuoto = le parole chiave della scheda didattica)</label><textarea id="skGloss" rows="3" placeholder="munzeddu&#10;paluneddo"></textarea></div>
+            <div><label>Capacità da scegliere (lasciare vuoto per le sei standard)</label><textarea id="skCap" rows="3" placeholder="Forza fisica&#10;Pazienza"></textarea></div>
+          </div>
+          <label>Domanda sul territorio</label>
+          <input id="skTerr" placeholder="Perché le saline sono proprio sulla costa tra Trapani e Marsala?">
+          <label>Intervista a casa — tre domande da fare a un nonno o a un artigiano</label>
+          <textarea id="skInt" rows="3" placeholder="Hai mai visto una salina da vicino? Cosa ricordi?"></textarea>
+          <div class="grid2">
+            <div><label>Che cosa disegnare</label><input id="skDis" placeholder="il paluneddo o il palo a T"></div>
+            <div><label>Frasi vero/falso per la versione adattata (metti ! davanti a quelle false)</label>
+                 <textarea id="skVF" rows="3" placeholder="Il munzeddu è un mucchio di sale.&#10;!Il sale cresce sugli alberi."></textarea></div>
+          </div>
+          <h2 style="font-size:14px;margin-top:16px">Versione adattata (autismo)</h2>
+          <p class="hint">Serve meno roba e più semplice: quattro cose da cercare, tre fasi, tre parole. Vuoto = si prendono le prime della scheda sopra.</p>
+          <div class="grid3">
+            <div><label>Quattro cose da cercare</label><textarea id="skA4" rows="3"></textarea></div>
+            <div><label>Tre fasi, in ordine</label><textarea id="skA3" rows="3"></textarea></div>
+            <div><label>Tre parole da collegare</label><textarea id="skAP" rows="3"></textarea></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+            <button class="btn rosa" onclick="salvaMeta()">Salva la scheda</button>
+            <button class="btn ghost" onclick="apriStampa('standard')">🖨️ Anteprima standard</button>
+            <button class="btn ghost" onclick="apriStampa('adattata')">🖨️ Anteprima adattata</button>
+            <span class="hint" id="skStato" style="margin-left:auto"></span>
+          </div>
+        </div>
+
         <!-- MEDIA -->
         <div class="card">
           <h2>Media della lezione (playlist)</h2>
@@ -898,6 +944,7 @@ async function apriLezione(id){
   const acc=l.accessibilita||{};
   $('fAccIpo').checked=acc.ipovedenti!==false; $('fAccLis').checked=!!acc.lis; $('fAccNote').value=acc.note||'';
   didatticaLezCarica(l.didattica);
+  schedaCarica((l.didattica||{}).scheda);
   $('mascPanel').classList.add('hidden');
   renderMedia(); renderTappe(); renderQuiz(); caricaMediaNelViewer(); aggiornaLisInfo();
   caricaLezioni();
@@ -909,7 +956,7 @@ async function salvaMeta(){
     video_coccio:$('fCoccio').value.trim()||null,
     corso_id:($('fCorso').value||null), progetto:progettoDelCorso($('fCorso').value)||LEZ.progetto,
     accessibilita:{ipovedenti:$('fAccIpo').checked,lis:$('fAccLis').checked,note:$('fAccNote').value.trim()},
-    didattica:didatticaLezPayload(),
+    didattica:Object.assign(didatticaLezPayload(),{scheda:schedaPayload()}),
     aggiornato_il:new Date().toISOString()};
   const {error}=await sb.from('edu_lezioni').update(upd).eq('id',LEZ.id);
   if(error){ toast('Errore: '+error.message); return; }
@@ -1158,6 +1205,65 @@ function didatticaLezCarica(d){
   $('fMateriali').value=(d.materiali||[]).join(', ');
   $('fPrima').value=d.prima||''; $('fDurante').value=d.durante||''; $('fDopo').value=d.dopo||'';
   $('fColleg').value=d.collegamenti||'';
+}
+
+/* ---- scheda da stampare (migr. 32) ---- */
+function schedaPayload(){
+  const s={};
+  const n=parseInt($('skN').value||'0',10), di=parseInt($('skDi').value||'0',10);
+  if(n>0)s.numero=n; if(di>0)s.di=di;
+  const t=(id)=>$(id).value.trim();
+  if(t('skPrima'))s.prima=t('skPrima');
+  if(righe($('skTrova').value).length)s.trova=righe($('skTrova').value);
+  if(righe($('skDistr').value).length)s.distrattori=righe($('skDistr').value);
+  if(righe($('skFasi').value).length)s.fasi=righe($('skFasi').value);
+  if(righe($('skGloss').value).length)s.glossario=righe($('skGloss').value).map(p=>({parola:p}));
+  if(righe($('skCap').value).length)s.capacita=righe($('skCap').value);
+  if(t('skTerr'))s.territorio=t('skTerr');
+  if(righe($('skInt').value).length)s.intervista=righe($('skInt').value).slice(0,3);
+  if(t('skDis'))s.disegno=t('skDis');
+  const vf=righe($('skVF').value).map(r=>r.startsWith('!')?{f:r.slice(1).trim(),v:false}:{f:r,v:true});
+  if(vf.length)s.vero_falso=vf.slice(0,4);
+  const a={};
+  if(righe($('skA4').value).length)a.trova4=righe($('skA4').value).slice(0,4);
+  if(righe($('skA3').value).length)a.fasi3=righe($('skA3').value).slice(0,3);
+  if(righe($('skAP').value).length)a.parole=righe($('skAP').value).slice(0,3);
+  if(Object.keys(a).length)s.adattata=a;
+  return s;
+}
+function schedaCarica(s){
+  s=s||{}; const a=s.adattata||{};
+  $('skN').value=s.numero||''; $('skDi').value=s.di||'';
+  $('skPrima').value=s.prima||''; $('skTrova').value=(s.trova||[]).join('\n');
+  $('skDistr').value=(s.distrattori||[]).join('\n'); $('skFasi').value=(s.fasi||[]).join('\n');
+  $('skGloss').value=(s.glossario||[]).map(g=>typeof g==='string'?g:(g.parola||'')).join('\n');
+  $('skCap').value=(s.capacita||[]).join('\n'); $('skTerr').value=s.territorio||'';
+  $('skInt').value=(s.intervista||[]).join('\n'); $('skDis').value=s.disegno||'';
+  $('skVF').value=(s.vero_falso||[]).map(x=>(x.v===false?'!':'')+(x.f||'')).join('\n');
+  $('skA4').value=(a.trova4||[]).join('\n'); $('skA3').value=(a.fasi3||[]).join('\n');
+  $('skAP').value=(a.parole||[]).join('\n');
+  schedaStato();
+}
+function schedaStato(){
+  const s=schedaPayload(), m=[];
+  if(!s.prima&&!$('fPrima').value.trim())m.push('domanda di apertura');
+  if(!s.fasi)m.push('fasi del lavoro');
+  if(!s.territorio)m.push('domanda sul territorio');
+  if(!s.intervista)m.push('intervista');
+  if(!s.disegno)m.push('disegno');
+  if(!s.vero_falso)m.push('vero/falso (serve alla versione adattata)');
+  $('skStato').textContent=m.length?('Mancano ancora: '+m.join(', ')):'Scheda completa.';
+  $('skStato').style.color=m.length?'#8a6a2b':'#2f7d32';
+}
+function apriStampa(tipo, liv){
+  if(!LEZ||!LEZ.slug){ toast('Apri prima una lezione'); return; }
+  const corso=CORSI.find(co=>co.id===LEZ.corso_id);
+  const cl=(corso&&CLIENTI.find(c=>c.id===corso.proprietario_id))
+         ||CLIENTI.find(c=>c.id===MIO_CLIENTE)||CLIENTI[0];
+  if(!cl){ toast('Nessun cliente per questa lezione'); return; }
+  if(!liv) liv=(corso&&corso.fascia==='senior')?'senior':'junior';
+  window.open(APP_BASE+'app/scheda.php?c='+encodeURIComponent(cl.slug)+'&lez='+encodeURIComponent(LEZ.slug)
+              +'&tipo='+tipo+'&liv='+liv,'_blank');
 }
 
 /* ==================== ESITI (migr. 32) ==================== */

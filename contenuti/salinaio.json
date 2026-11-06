@@ -1,0 +1,53 @@
+{
+  "_nota": "Contenuti della scheda del SALINAIO, presi dalle due schede Word del 20/10/2026. Si incollano in regia nel campo «Scheda da stampare» della lezione. I testi dei punti che brillano (hotspot) e il quiz restano quelli della lezione.",
+  "numero": 1,
+  "di": 5,
+  "prima": "Secondo te, come si «raccoglie» il sale? Scrivi tre parole che ti vengono in mente pensando a una salina.",
+  "trova": [
+    "Il palo a forma di T",
+    "Il fondo di argilla",
+    "Il paluneddo, la pala del salinaio",
+    "Un munzeddu, il cumulo di sale",
+    "La crosta di sale nella vasca"
+  ],
+  "distrattori": ["Un mulino a vento"],
+  "fasi": [
+    "Il salinaio rompe la crosta di sale con il palo a T.",
+    "Raccoglie il sale con il paluneddo, senza toccare l'argilla del fondo.",
+    "Controlla la punta della pala: se resta bianca, il sale è puro.",
+    "Porta il sale fuori dalla vasca e forma il munzeddu.",
+    "Il munzeddu asciuga e si copre di una crosta naturale che lo protegge dalla pioggia."
+  ],
+  "glossario": [
+    {"parola": "munzeddu"}, {"parola": "paluneddo"}, {"parola": "crosta di sale"},
+    {"parola": "argilla"}, {"parola": "vasca salante"}
+  ],
+  "territorio": "Perché le saline sono proprio sulla costa tra Trapani e Marsala? Pensa al mare, al sole e al vento.",
+  "capacita": ["Forza fisica", "Pazienza", "Precisione", "Conoscere il meteo", "Lavoro di squadra", "Creatività"],
+  "intervista": [
+    "Hai mai visto una salina da vicino? Cosa ricordi?",
+    "Conosci qualcuno che ha lavorato in salina o nel commercio del sale?",
+    "Perché, secondo te, il sale di Trapani è famoso?"
+  ],
+  "disegno": "il paluneddo o il palo a T",
+  "vero_falso": [
+    {"f": "Il munzeddu è un mucchio di sale.", "v": true},
+    {"f": "Il palo a T rompe la crosta di sale.", "v": true},
+    {"f": "Il sale si fa con l'acqua del mare.", "v": true},
+    {"f": "Il sale cresce sugli alberi.", "v": false}
+  ],
+  "autovalutazione": [
+    "So spiegare le fasi di questo mestiere",
+    "Conosco almeno tre parole del mestiere",
+    "Ho lavorato bene con la mia squadra"
+  ],
+  "adattata": {
+    "trova4": ["Il munzeddu", "La vasca con il sale", "Il palo a T", "La pala"],
+    "fasi3": [
+      "Rompo la crosta di sale con il palo a T.",
+      "Raccolgo il sale con la pala.",
+      "Faccio il munzeddu."
+    ],
+    "parole": ["munzeddu", "pala", "vasca"]
+  }
+}

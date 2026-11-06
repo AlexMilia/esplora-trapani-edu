@@ -40,6 +40,7 @@ né i compiti (nei compiti ci sono le risposte giuste). La migrazione stessa fal
 | `api.php` | v6: azioni `esito`, `diario`, `compito`, `consegna` |
 | `index.php` | player v2.4 |
 | `compito.php` | **nuovo**: la pagina del compito a casa |
+| `scheda.php` | **nuovo**: la scheda alunno da stampare (standard e adattata) |
 | `regia-edu.php` | regia v18 |
 | `regia-edu.html` | la stessa regia, versione senza PHP (tienile allineate) |
 | `stripe.php`, `stripe-webhook.php`, `stripe-setup.php` | se attivi anche la Fase 2 |
@@ -64,6 +65,10 @@ Dopo il caricamento, svuota la cache: cancella i file `app/dati/cache_*.json` da
 7. Crea un **compito** (🧾 Esiti e compiti → scegli corso e lezione → ＋ Nuovo compito → ⤓ copia le domande
    dal quiz → Salva), copia il link e aprilo dal telefono. Rispondi: il punteggio appare e in regia arriva
    una riga con modalità «compito a casa».
+8. Apri una lezione nel player e premi **🖨️**: si apre la scheda alunno di quella lezione. Stampa in PDF e
+   controlla che stia in **2 facciate**. Poi in regia → **🖨️ Scheda da stampare** scegli *adattata*: devono
+   uscire **10 pagine**. Se una lezione non ha ancora la scheda compilata, in cima compare l'avviso
+   «Questa scheda è incompleta»: è il comportamento voluto, non un errore.
 
 ## 4. Il primo giro di lavoro vero (quello che serve a gennaio)
 
