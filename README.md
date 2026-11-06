@@ -20,14 +20,17 @@ app/            codice che va su Aruba in /project/edu/app/
   api.php         API del player: menu, lezione, tracking; risposte cifrate AES-256 con chiave di sessione
   live.php        quiz live (stanze su file in dati/live/), live-lim.js (LIM), rispondi.php (telefoni)
   regia-edu.php   regia (identica a regia-edu.html, ma URL/chiave Supabase letti da dati/config.php)
+  compito.php     compito a casa: clip da rivedere + domande, corrette dal server
   attiva.php      modulo pubblico «richiedi l'attivazione» → edu_richieste
   stripe.php / stripe-webhook.php / stripe-setup.php   abbonamenti (Fase 2)
   debug500.php    diagnostica di deploy — DA CANCELLARE dal server dopo l'uso
   dati/           config.example.php (modello), .htaccess (nega tutto dal web); a runtime: config.php, cache, log, rl/, live/
 deploy/         htaccess-project-edu.txt → va in /project/edu/.htaccess · righe-da-aggiungere-a-config.txt (Stripe)
-migrazioni/     migrazione_19 … 31 (singole) · migrazione_completa.sql (tutte insieme, idempotente) · replica.sql (schema di produzione per i test)
+migrazioni/     migrazione_19 … 32 (singole) · migrazione_completa.sql (tutte insieme, idempotente) · replica.sql (schema di produzione per i test)
 test/           tutte le suite + mock Stripe/Supabase + lanciatori (vedi test/LEGGIMI-TEST.md)
 docs/           manuale tecnico, architettura, relazioni di deploy/audit, guida audio, manuale quiz live, relazione per la finanza agevolata
+  didattica/      UDA per il PTOF, guida docente, rubriche, prove di ingresso/uscita, protocollo della sperimentazione
+  amministrativo/ nomina a responsabile del trattamento, informativa famiglie, dichiarazione di accessibilità, scheda tecnica, come ci si compra
 demo-vr/        demo offline per Meta Quest (A-Frame locale, video da Bunny o da demo-vr/video/)
 ```
 
@@ -57,7 +60,18 @@ Senza il `config.php` reale (chiavi Supabase) il player si apre ma il menu resta
 | Migrazione 29 (RLS consolidata) | ❌ da applicare | Fase 1 audit |
 | Migrazione 30 (abbonamenti) + Stripe | ❌ da attivare | Fase 2, passi in `docs/LEGGIMI-FASE2-STRIPE.md` (prima chiavi di test) |
 | Migrazione 31 (elenco clienti per il catalogo) | ❌ da applicare | insieme a regia v17.1 (vedi `docs/CHANGELOG.md`) |
-| `app/` (api v5, player v2.3, regia v16.2) | ✅ dal 23/09 | regia v17.1 + stripe*.php ancora da caricare |
+| Migrazione 32 (blocco didattico: esiti, compiti, diario) | ❌ da applicare | insieme a api v6, player v2.4, regia v18 e `compito.php` |
+| `app/` (api v5, player v2.3, regia v16.2) | ✅ dal 23/09 | api v6 + player v2.4 + regia v18 + compito.php + stripe*.php ancora da caricare |
+
+## Didattica e valutazione (migrazione 32)
+
+Quello che trasforma la piattaforma da attività a strumento adottabile da una scuola:
+
+- **Esiti citabili.** Ogni quiz (in aula, live, compito a casa, prova di ingresso/uscita) lascia una riga in `edu_esiti`: data, classe, corso, lezione, modalità, partecipanti come conteggio, risposte giuste su domande, percentuale. Dalla regia → 🧾 Esiti e compiti si filtra per classe e periodo, si esporta in **CSV** e si stampa una **scheda con le firme di docente e dirigente**.
+- **Nessun dato personale di minori, per costruzione.** L'unità di misura è la classe: i nickname del quiz live restano nel file temporaneo della partita e non entrano nel database. È questa scelta che rende l'informativa alle famiglie una pagina sola (`docs/amministrativo/`).
+- **Scheda della lezione per il docente.** Obiettivi per livello, traguardi del corso, prima/durante/dopo, materiali, collegamenti al libro: si compilano in regia (📚 Corsi e editor della lezione) e si aprono in aula col tasto 📋 del player.
+- **Compiti a casa.** `app/compito.php?k=CODICE`: clip da rivedere e domande; la correzione è server-side (`edu_compito_valuta`), le risposte giuste non raggiungono il dispositivo, l'esito rientra fra gli esiti della classe.
+- **Diario del percorso.** Il menu del player mostra alla classe cosa ha già fatto e con quale esito (`edu_diario_classe`, per codice classe).
 
 ## Regole di sicurezza (non negoziabili)
 

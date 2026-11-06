@@ -11,6 +11,7 @@
      e se Supabase e' giu' si serve l'ultima copia buona
    - risposta CIFRATA AES-256-CBC con chiave di sessione
    Azioni: menu | lezione&id=slug | lez&token=... | track (POST)
+           esito (POST) | diario&classe=... | compito&k=... | consegna (POST)
    ===================================================================== */
 session_start();
 define('EDU_OK', 1);
@@ -74,7 +75,7 @@ function edu_deny($code, $err){
 /* ---- VERSIONE (sempre accessibile, serve a capire quale file è online) ---- */
 if(isset($_GET['ver'])){
   header('Content-Type: text/plain; charset=utf-8');
-  echo "Sale in Classe · api.php v5 (catalogo + scuole: licenza a tre livelli) · progetto: " . $EDU_PROGETTO . "\n";
+  echo "Esplora Trapani Edu · api.php v6 (catalogo + scuole + blocco didattico: esiti, diario, compiti) · progetto: " . $EDU_PROGETTO . "\n";
   echo "tenant: " . ($EDU_C !== '' ? $EDU_C : '(legacy: ' . $EDU_PROGETTO . ')') . "\n";
   echo "diagnostica: api.php?action=diag&k=LA_CHIAVE\n";
   exit;
@@ -473,6 +474,93 @@ if($action === 'track'){
   list($code, ) = edu_supa('/rest/v1/edu_eventi', $riga, true);
   edu_log('track', $tipo . ' ' . $classe . ' ' . $lezione . ' http' . $code);
   edu_out(['ok' => ($code === 201 || $code === 200)]);
+}
+
+/* ---------- ESITO della lezione (POST) · migr. 32 ----------
+   Diventa una riga citabile in edu_esiti, che il docente esporta dalla regia
+   e allega alla valutazione. Dati di CLASSE: nessun nome di alunno, mai.
+   Dal quiz di fine lezione (modalita=aula), dal quiz live (live) oppure
+   dalle prove di ingresso/uscita della sperimentazione.              */
+if($action === 'esito'){
+  if($EDU_C === '') edu_deny(400, 'tenant');
+  if(!edu_throttle('esito', 60, 300)) edu_deny(429, 'rate');     /* 60 salvataggi / 5 min per IP */
+  $b = json_decode(file_get_contents('php://input'), true);
+  if(!is_array($b)) edu_deny(400, 'body');
+
+  $classe = isset($b['classe']) ? strtoupper($b['classe']) : 'ANON';
+  if(!preg_match('/^[A-Z0-9-]{1,20}$/', $classe)) $classe = 'ANON';
+  $mod = isset($b['modalita']) ? $b['modalita'] : 'aula';
+  if(!in_array($mod, ['aula','live','compito','ingresso','uscita'], true)) $mod = 'aula';
+  $nd = isset($b['n_domande']) ? max(0, min(100, (int)$b['n_domande'])) : 0;
+  $ng = isset($b['n_giuste'])  ? max(0, min($nd, (int)$b['n_giuste'])) : 0;
+  if($nd === 0) edu_deny(400, 'n_domande');
+  $det = (isset($b['dettaglio']) && is_array($b['dettaglio'])) ? $b['dettaglio'] : [];
+  if(strlen(json_encode($det)) > 6000) $det = [];
+
+  $p = [
+    'cliente'   => $EDU_C,
+    'classe'    => $classe,
+    'lezione'   => isset($b['lezione']) ? substr(preg_replace('/[^a-z0-9\-_]/', '', strtolower($b['lezione'])), 0, 40) : '',
+    'modalita'  => $mod,
+    'n_domande' => $nd,
+    'n_giuste'  => $ng,
+    'dettaglio' => $det,
+  ];
+  if(isset($b['lezione_titolo'])) $p['lezione_titolo'] = substr((string)$b['lezione_titolo'], 0, 200);
+  if(isset($b['livello']) && in_array($b['livello'], ['junior','senior'], true)) $p['livello'] = $b['livello'];
+  if(isset($b['n_partecipanti'])) $p['n_partecipanti'] = max(0, min(500, (int)$b['n_partecipanti']));
+
+  list($code, $out) = edu_supa('/rest/v1/rpc/edu_salva_esito', ['p' => $p]);
+  $r = ($code === 200) ? json_decode($out, true) : null;
+  edu_log('esito', $mod . ' ' . $classe . ' ' . $p['lezione'] . ' ' . $ng . '/' . $nd . ' http' . $code);
+  if(!is_array($r) || empty($r['ok'])) edu_out(['ok' => false, 'err' => (is_array($r) && isset($r['err'])) ? $r['err'] : 'esito']);
+  edu_out(['ok' => true, 'id' => isset($r['id']) ? $r['id'] : null, 'gia_salvato' => !empty($r['gia_salvato'])]);
+}
+
+/* ---------- DIARIO del percorso della classe · migr. 32 ----------
+   Che cosa ha già fatto questa classe e cosa le resta. Aggregato, nessun alunno. */
+if($action === 'diario'){
+  if($EDU_C === '') edu_deny(400, 'tenant');
+  $classe = isset($_GET['classe']) ? strtoupper(preg_replace('/[^A-Za-z0-9\-]/', '', $_GET['classe'])) : '';
+  if($classe === '') edu_out(['ok' => true, 'diario' => []]);
+  list($code, $out) = edu_supa('/rest/v1/rpc/edu_diario_classe',
+                               ['p_cliente_slug' => $EDU_C, 'p_codice' => $classe]);
+  $d = ($code === 200) ? json_decode($out, true) : null;
+  if(!is_array($d)) edu_deny(503, 'dati');
+  edu_out(['ok' => true, 'diario' => $d]);
+}
+
+/* ---------- COMPITO a casa: apertura · migr. 32 ----------
+   Le risposte giuste non arrivano mai al dispositivo: la RPC non le restituisce. */
+if($action === 'compito'){
+  $cod = isset($_GET['k']) ? strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $_GET['k'])) : '';
+  if(!preg_match('/^[A-Z0-9]{6,12}$/', $cod)) edu_deny(400, 'codice');
+  list($code, $out) = edu_supa('/rest/v1/rpc/edu_compito_apri', ['p_codice' => $cod]);
+  $k = ($code === 200) ? json_decode($out, true) : null;
+  if(!is_array($k) || empty($k['ok'])) edu_deny(404, 'compito');
+  edu_log('compito', $cod);
+  edu_out(['ok' => true, 'compito' => $k]);
+}
+
+/* ---------- COMPITO a casa: consegna (POST) · migr. 32 ----------
+   La correzione la fa il database. L'esito entra in edu_esiti (modalita=compito). */
+if($action === 'consegna'){
+  if(!edu_throttle('consegna', 240, 300)) edu_deny(429, 'rate');  /* una classe intera, non un bot */
+  $b = json_decode(file_get_contents('php://input'), true);
+  if(!is_array($b)) edu_deny(400, 'body');
+  $cod = isset($b['k']) ? strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $b['k'])) : '';
+  if(!preg_match('/^[A-Z0-9]{6,12}$/', $cod)) edu_deny(400, 'codice');
+  $classe = isset($b['classe']) ? strtoupper($b['classe']) : 'ANON';
+  if(!preg_match('/^[A-Z0-9-]{1,20}$/', $classe)) $classe = 'ANON';
+  $risp = (isset($b['risposte']) && is_array($b['risposte'])) ? array_slice(array_values($b['risposte']), 0, 100) : [];
+  foreach($risp as $i => $v){ $risp[$i] = is_numeric($v) ? (int)$v : null; }
+
+  list($code, $out) = edu_supa('/rest/v1/rpc/edu_compito_valuta',
+                               ['p_codice' => $cod, 'p_classe' => $classe, 'p_risposte' => $risp]);
+  $r = ($code === 200) ? json_decode($out, true) : null;
+  edu_log('consegna', $cod . ' ' . $classe . ' http' . $code);
+  if(!is_array($r) || empty($r['ok'])) edu_out(['ok' => false, 'err' => (is_array($r) && isset($r['err'])) ? $r['err'] : 'consegna']);
+  edu_out(['ok' => true, 'n_domande' => $r['n_domande'], 'n_giuste' => $r['n_giuste'], 'esito' => $r['esito']]);
 }
 
 edu_deny(400, 'action');

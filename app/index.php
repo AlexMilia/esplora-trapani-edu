@@ -6,6 +6,10 @@
    e vengono consegnati da api.php (token di sessione + risposta cifrata
    AES). Chi salva questa pagina si porta via solo il motore.
    Pattern: progetto Odissea/mareandmore (agosto 2026).
+   v2.4 (migr. 32 · blocco didattico): comandi ⏪10s/⏩10s e lezione
+   precedente/successiva, 📋 scheda della lezione per il docente, percorso
+   della classe nel menu (lezioni fatte + esito), esito del quiz salvato
+   come evidenza valutativa, «Prossima lezione» a fine lezione.
    ===================================================================== */
 session_start();
 /* host canonico: Aruba fa 301 non-www -> www e il preflight CORS di
@@ -160,6 +164,9 @@ edu_log('view', isset($_SERVER['QUERY_STRING']) ? $_SERVER['QUERY_STRING'] : '')
   .accsel .seg button{border:none;background:transparent;color:var(--ink);border-radius:999px;padding:8px 14px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
   .accsel .seg button.on{background:var(--blu);color:#fff}
   .lez .accbadge{display:inline-block;margin-left:6px;font-size:11px;background:rgba(255,255,255,.25);border-radius:999px;padding:2px 8px}
+  /* lezione già svolta da questa classe (migr. 32): si distingue senza perdere il colore del corso */
+  .lez.fatta{box-shadow:inset 0 0 0 3px rgba(255,255,255,.55)}
+  .lez.fatta small{font-weight:700;opacity:1}
   .lez.noacc{opacity:.45;filter:grayscale(.6)}
 
   body.ipo{--ink:#111;--sale:#fff;--rosaTxt:#8a1e3c;--blu:#0b3d66;--oro:#6b4e00}
@@ -348,12 +355,17 @@ window.EDU_BASE = <?php echo json_encode(rtrim(dirname($_SERVER['SCRIPT_NAME'] ?
 <div class="teachbar">
   <span class="tit"><span id="brandTit"><?php echo $B('titolo'); ?></span> <em id="brandSub" style="opacity:.7;font-weight:400"><?php echo $B('sottotitolo'); ?></em> <img class="cimg-mini" src="<?php echo $B('mascotte_img'); ?>" alt="" onerror="this.remove()"><span class="demotag" style="opacity:.5;font-size:12px"> · demo</span></span>
   <span class="sp"></span>
+  <button class="tbtn" id="btnIndietro" onclick="saltaVideo(-10)" aria-label="Indietro di 10 secondi" title="Indietro di 10 secondi">⏪<span class="lbl"> 10s</span></button>
   <button class="tbtn" id="btnPausa" onclick="togglePausa()">⏸<span class="lbl"> Pausa</span></button>
+  <button class="tbtn" id="btnAvanti" onclick="saltaVideo(10)" aria-label="Avanti di 10 secondi" title="Avanti di 10 secondi">⏩<span class="lbl"> 10s</span></button>
   <button class="tbtn" onclick="prossimaTappa()" aria-label="Prossima scoperta">⏭<span class="lbl"> Prossima scoperta</span></button>
   <button class="tbtn" id="btnElenco" onclick="apriElenco()" aria-label="Elenco delle scoperte">📖</button>
+  <button class="tbtn" id="btnScheda" onclick="apriScheda()" aria-label="Scheda della lezione per il docente" title="Scheda della lezione (per il docente)">📋</button>
   <button class="tbtn" id="btnDSA" onclick="toggleDSA()" aria-label="Alta leggibilità" title="Alta leggibilità">Aa</button>
   <button class="tbtn" id="btnCC" onclick="toggleCCMenu()" aria-label="Sottotitoli">CC</button>
   <button class="tbtn" id="tbLive" style="display:none" onclick="quizLive()" aria-label="Quiz live con i dispositivi degli alunni" title="Quiz live: PIN sui dispositivi degli alunni">🎮<span class="lbl"> Quiz live</span></button>
+  <button class="tbtn" id="btnPrec" onclick="lezionePrec()" aria-label="Lezione precedente" title="Lezione precedente">‹</button>
+  <button class="tbtn" id="btnSucc" onclick="lezioneSucc()" aria-label="Lezione successiva" title="Lezione successiva">›</button>
   <button class="tbtn" onclick="vaiMenu()" aria-label="Tutte le lezioni">☰<span class="lbl"> Lezioni</span></button>
 </div>
 
@@ -437,6 +449,7 @@ window.EDU_BASE = <?php echo json_encode(rtrim(dirname($_SERVER['SCRIPT_NAME'] ?
     <h1>Bravissimi!</h1>
     <p id="fineTxt"></p>
     <p style="font-weight:700;color:var(--rosa)"><?php echo $BRAND['congedo']; ?></p>
+    <button class="bigbtn oro" id="btnFineSucc" style="display:none"></button>
     <button class="bigbtn" onclick="vaiMenu()">☰ Torna alle lezioni</button>
   </div>
 </div>
@@ -471,6 +484,17 @@ window.EDU_BASE = <?php echo json_encode(rtrim(dirname($_SERVER['SCRIPT_NAME'] ?
     <div id="coccioSlot"></div>
   </div>
   <button id="coccioSkip" onclick="chiudiCoccio()">Salta ▸</button>
+</div>
+
+<!-- overlay: SCHEDA DELLA LEZIONE (per il docente) · migr. 32 -->
+<div class="ovl" id="scheda">
+  <div class="card">
+    <button class="closex" onclick="chiudiScheda()" aria-label="Chiudi">✕</button>
+    <h1>📋 Scheda della <em>lezione</em></h1>
+    <p class="hint" style="text-align:left;opacity:.75">Per il docente: obiettivi e conduzione. Gli alunni non devono leggerla.</p>
+    <div id="schedaBody" style="text-align:left"></div>
+    <div style="text-align:center"><button class="bigbtn oro" onclick="chiudiScheda()">Torna alla lezione</button></div>
+  </div>
 </div>
 
 <!-- overlay: elenco scoperte (ripasso + alternativa testuale al 360) -->
@@ -598,6 +622,7 @@ async function caricaMenu(){
       MASC_LIV=j.mascotteLiv||{junior:MASCOTTE,senior:MASCOTTE}; MASC_CFG=j.mascotteCfg||{junior:true,senior:true};
       cacheSet(CK('edu_menu'),j.lezioni||[]); cacheSet(CK('edu_corsi'),j.corsi||[]); cacheSet(CK('edu_cliente'),j.cliente||null);
       cacheSet(CK('edu_masc'),{m:MASCOTTE,q:MASC_QUIZ_SEMPRE,l:MASC_LIV,c:MASC_CFG});
+      caricaDiario();                      /* percorso già svolto da questa classe (migr. 32) */
       return;
     }
     throw new Error((j&&j.err)||'menu');
@@ -908,6 +933,7 @@ async function avviaCorso(){
 }
 
 /* memoria delle lezioni completate (solo su questo dispositivo, anonima) */
+function esc(s){ const d=document.createElement('div'); d.textContent=String(s==null?'':s); return d.innerHTML.replace(/'/g,'&#39;').replace(/"/g,'&quot;'); }
 function lezioniFatte(){ try{ return JSON.parse(localStorage.getItem('edu_fatte')||'[]'); }catch(e){ return []; } }
 function segnaFatta(slug){
   const a=lezioniFatte(); if(a.indexOf(slug)<0)a.push(slug);
@@ -920,10 +946,52 @@ function corsoCompletato(){
   return attese.every(id=>fatte.indexOf(id)>=0);
 }
 
+/* ================= PERCORSO DELLA CLASSE (migr. 32) =================
+   DIARIO viene dal server per codice classe: resta anche se la lezione la
+   si riprende da un altro computer o dalla LIM di un'altra aula. Senza
+   codice classe (o se la rete non risponde) si ripiega su localStorage. */
+let DIARIO={};
+async function caricaDiario(){
+  if(typeof CLASSE==='undefined'||CLASSE==='ANON'||!window.EDU_C)return;
+  try{
+    const j=await eduApi('action=diario');
+    if(j&&j.ok&&Array.isArray(j.diario)){
+      DIARIO={}; j.diario.forEach(r=>{ DIARIO[r.lezione]={fatta:!!r.fatta,pct:(r.pct===null?null:r.pct),volte:r.volte||0}; });
+      buildMenu();
+    }
+  }catch(e){ /* il menu funziona comunque: il diario è un extra */ }
+}
+function statoLez(slug){
+  const d=DIARIO[slug];
+  if(d&&d.fatta)return d;
+  return (lezioniFatte().indexOf(slug)>=0)?{fatta:true,pct:null,volte:1}:null;
+}
+
+/* ---- esito della lezione: la riga che il docente allega alla valutazione ---- */
+async function salvaEsito(modalita,giuste,tot,extra){
+  if(!window.EDU_C||!tot)return null;
+  const corpo=Object.assign({
+    classe:(typeof CLASSE!=='undefined')?CLASSE:'ANON',
+    lezione:LEZ?LEZ.id:'',
+    lezione_titolo:LEZ?LEZ.tit:'',
+    livello:LIVELLO, modalita:modalita,
+    n_domande:tot, n_giuste:giuste
+  },extra||{});
+  try{
+    const j=await eduApi('action=esito',corpo);
+    if(j&&j.ok&&DIARIO[corpo.lezione]!==undefined){
+      const pct=Math.round(100*giuste/tot);
+      DIARIO[corpo.lezione]={fatta:true,pct:Math.max(pct,DIARIO[corpo.lezione].pct||0),volte:(DIARIO[corpo.lezione].volte||0)+1};
+    }
+    return j;
+  }catch(e){ return null; }
+}
+
 /* ---- menu lezioni ---- */
 function scegliCorso(i){ CORSO_SEL=CORSI[i]; CATALOGO=CORSO_SEL.lezioni||[]; applicaMascotteCorso(CORSO_SEL); buildMenu(); say(CORSO_SEL.tit+': scegliete la lezione!',true); }
 function tuttiICorsi(){ CORSO_SEL=null; CATALOGO=[]; buildMenu(); }
 function buildMenu(){
+  updNav();                      /* ‹ › coerenti anche prima di aprire una lezione (migr. 32) */
   const box=document.getElementById('menuLez'); box.textContent='';
   if(LICENZA_KO){ mostraLicenza(LICENZA_KO); return; }
   /* Fase 2: più corsi → prima le card dei corsi */
@@ -962,7 +1030,13 @@ function buildMenu(){
     const em=document.createElement('div');em.className='em';em.textContent=l.em;b.appendChild(em);
     const h=document.createElement('h3');h.textContent=l.tit;b.appendChild(h);
     const p=document.createElement('p');p.textContent=l.sub||'';b.appendChild(p);
-    const s=document.createElement('small');s.textContent=soon?'🔒 Prossimamente':('▶ '+(l.durata||''));b.appendChild(s);
+    const s=document.createElement('small');
+    const st=soon?null:statoLez(l.id);     /* percorso della classe (migr. 32) */
+    s.textContent=soon?'🔒 Prossimamente'
+      :(st?('✓ fatta'+(st.pct!==null&&st.pct!==undefined?' · '+st.pct+'% al quiz':'')+(st.volte>1?' · '+st.volte+' volte':''))
+          :('▶ '+(l.durata||'')));
+    b.appendChild(s);
+    if(st)b.classList.add('fatta');
     const a=l.acc||{};
     if(a.lis||(a.lis_clip&&a.lis_clip>0)){ const bd=document.createElement('span'); bd.className='accbadge'; bd.textContent='🤟 LIS'+(a.n_clip&&a.lis_clip<a.n_clip?' parziale':''); h.appendChild(bd); }
     if(a.ipovedenti===false){ const bd=document.createElement('span'); bd.className='accbadge'; bd.textContent='👁 non adatta'; h.appendChild(bd); }
@@ -978,11 +1052,13 @@ function vaiMenu(){
   started=false;
   updSeekbar(); renderCue('');
   document.getElementById('menuX').style.display=LEZ?'block':'none';
-  ['scoperta','quiz','fine'].forEach(i=>document.getElementById(i).classList.remove('on'));
+  ['scoperta','quiz','fine','scheda','elenco'].forEach(i=>{const e=document.getElementById(i); if(e)e.classList.remove('on');});
   document.getElementById('pill').classList.remove('on');
   const g=document.getElementById('hotspots'); while(g.firstChild)g.removeChild(g.firstChild);
   document.getElementById('tbLive').style.display='none';
   document.getElementById('menu').classList.add('on');
+  buildMenu();                 /* ridisegna col percorso aggiornato (migr. 32) */
+  updNav();
   say('Scegliete la lezione di oggi!',true);
 }
 
@@ -1021,6 +1097,7 @@ async function avviaLezione(i){
   document.getElementById('tbLive').style.display=QUIZ_LIVE_OK?'':'none';
   updPausaBtn();
   updSeekbar();
+  updNav();
   loadCC();
 }
 
@@ -1172,6 +1249,66 @@ function togglePausa(){
   updPausaBtn();
 }
 function updPausaBtn(){ document.getElementById('btnPausa').innerHTML=vid.paused?'▶<span class="lbl"> Riprendi</span>':'⏸<span class="lbl"> Pausa</span>'; }
+
+/* ---- avanti/indietro di pochi secondi: sulla LIM il cursore in fondo
+        allo schermo è impossibile da centrare col dito (migr. 32) ---- */
+function saltaVideo(s){
+  if(!started||!vid.duration)return;
+  vid.currentTime=Math.max(0,Math.min(vid.duration-0.3,(vid.currentTime||0)+s));
+  audioSeek(); if(ACC==='lis')lisSync(true);
+  updSeekbar();
+  say(s<0?('Torniamo indietro di '+Math.abs(s)+' secondi'):('Andiamo avanti di '+s+' secondi'));
+}
+
+/* ---- lezione precedente / successiva senza passare dal menu ---- */
+function lezApribili(){ return CATALOGO.map((l,i)=>({l:l,i:i})).filter(x=>x.l.stato!=='soon'&&!x.l.soon); }
+function vicina(dir){
+  const a=lezApribili(), p=a.findIndex(x=>x.i===lezIdx);
+  if(p<0)return null;
+  const n=a[p+dir];
+  return n?n.i:null;
+}
+function lezionePrec(){ const i=vicina(-1); if(i!==null)avviaLezione(i); }
+function lezioneSucc(){ const i=vicina(1);  if(i!==null)avviaLezione(i); }
+function updNav(){
+  const p=document.getElementById('btnPrec'), s=document.getElementById('btnSucc');
+  if(!p||!s)return;
+  const nessuna=(typeof lezIdx!=='number')||!LEZ;
+  p.disabled=nessuna||vicina(-1)===null;
+  s.disabled=nessuna||vicina(1)===null;
+  p.style.opacity=p.disabled?.35:1; s.style.opacity=s.disabled?.35:1;
+}
+
+/* ---- scheda della lezione: obiettivi e conduzione, per il docente ---- */
+function apriScheda(){
+  const d=(LEZ&&LEZ.didattica)||{}, dc=(LEZ&&LEZ.corso&&LEZ.corso.didattica)||{};
+  const liv=(LIVELLO==='senior')?'medie':'primaria';
+  const box=document.getElementById('schedaBody');
+  const righe=[];
+  const lista=(tit,arr)=>{ if(arr&&arr.length)righe.push('<h2 style="font-size:17px;margin:14px 0 4px">'+tit+'</h2><ul style="margin:0 0 6px 18px">'+arr.map(x=>'<li>'+esc(String(x))+'</li>').join('')+'</ul>'); };
+  const para=(tit,txt)=>{ if(txt&&String(txt).trim())righe.push('<h2 style="font-size:17px;margin:14px 0 4px">'+tit+'</h2><p style="margin:0 0 6px">'+esc(String(txt))+'</p>'); };
+  righe.push('<p style="margin:0"><b>'+esc(LEZ?LEZ.tit:'')+'</b>'+(LEZ&&LEZ.corso?' · '+esc(LEZ.corso.tit):'')+' · '+(LIVELLO==='senior'?'medie 11–13':'primaria 8–10')+'</p>');
+  lista('Obiettivi di questa lezione',(d.obiettivi&&d.obiettivi[liv])||[]);
+  lista('Traguardi del percorso',(dc.traguardi&&dc.traguardi[liv])||[]);
+  lista('Parole chiave',d.parole_chiave||[]);
+  para('Prima di partire',d.prima);
+  para('Durante il video',d.durante);
+  para('Dopo, in classe',d.dopo);
+  lista('Materiali',d.materiali||[]);
+  para('Collegamenti al libro',d.collegamenti);
+  /* se la LEZIONE non ha nulla di compilato lo diciamo, anche quando i
+     traguardi del corso ci sono: così il docente sa che manca un pezzo */
+  const vuota=!['obiettivi','parole_chiave','prima','durante','dopo','materiali','collegamenti']
+      .some(k=>d[k]&&(Array.isArray(d[k])?d[k].length:(typeof d[k]==='object'?Object.keys(d[k]).length:String(d[k]).trim())));
+  if(vuota)righe.push('<p style="opacity:.7">Per questa lezione la scheda didattica non è ancora stata compilata in regia.</p>');
+  box.innerHTML=righe.join('');
+  try{vid.pause();}catch(e){} updPausaBtn();
+  document.getElementById('scheda').classList.add('on');
+}
+function chiudiScheda(){
+  document.getElementById('scheda').classList.remove('on');
+  if(started){ vid.play().catch(()=>{}); updPausaBtn(); }
+}
 function prossimaTappa(){
   if(!LEZ)return;
   if(tappaAttiva){
@@ -1327,8 +1464,23 @@ document.addEventListener('edu-live-fine', async (e)=>{
   track('quiz_esito', d);                      /* d.live=true lo distingue dal quiz di classe */
   track('lezione_completata',{livello:LIVELLO,live:true});
   if(LEZ) segnaFatta(LEZ.id);
+  /* anche il quiz live lascia un'evidenza esportabile (migr. 32): finora il
+     risultato viveva solo nel file temporaneo della partita e si perdeva.
+     Nel dettaglio va l'aggregato per domanda, mai i nickname. */
+  if(d.n_quiz){
+    const pct=(d.pct_classe!=null)?d.pct_classe:0;
+    salvaEsito('live',Math.round(pct*d.n_quiz/100),d.n_quiz,{
+      n_partecipanti:d.n_gioc||0,
+      dettaglio:{pct_classe:pct,per_domanda:(d.recap||[]).map((r,i)=>({n:i,domanda:String(r.domanda||'').slice(0,120),pct:r.pct,risposte:r.tot}))}
+    });
+  }
   document.getElementById('quiz').classList.remove('on');
   document.getElementById('fineTxt').textContent='Quiz live completato! La classe ha risposto bene al '+(d.pct_classe!=null?d.pct_classe:'—')+'% delle domande. ✨';
+  const succ=vicina(1), bs=document.getElementById('btnFineSucc');
+  if(bs){
+    if(succ!==null){ bs.style.display=''; bs.textContent='Prossima lezione: '+(CATALOGO[succ].tit||'')+' ›'; bs.onclick=()=>{ document.getElementById('fine').classList.remove('on'); avviaLezione(succ); }; }
+    else bs.style.display='none';
+  }
   document.getElementById('fine').classList.add('on');
   say('Che squadra fantastica! ✨',true);
 });
@@ -1370,11 +1522,21 @@ async function fineLezione(){
   track('quiz_esito',{punti:punti,su:QZ.length,livello:LIVELLO});
   track('lezione_completata',{livello:LIVELLO});
   segnaFatta(LEZ.id);
+  /* l'esito diventa una riga esportabile dalla regia: è l'evidenza che il
+     docente allega alla valutazione (migr. 32) */
+  salvaEsito('aula',punti,QZ.length,{dettaglio:{per_domanda:QZ.map((q,i)=>({n:i,domanda:String(q.domanda||'').slice(0,120)}))}});
   await playCoccio(mascVideo('fine_lezione'));              /* saluto di fine lezione */
   const tutto=corsoCompletato();
   if(tutto)await playCoccio(mascVideo('fine_corso'));       /* diploma: tutte le lezioni fatte */
   document.getElementById('fineTxt').textContent=
     (tutto?'Percorso completato! ':'')+'Lezione "'+LEZ.tit+'" completata: '+punti+' risposte giuste su '+QZ.length+'!';
+  /* «Prossima lezione» senza tornare al menu: è così che un percorso si tiene
+     insieme su più incontri (buco della frequenza) */
+  const succ=vicina(1), bs=document.getElementById('btnFineSucc');
+  if(bs){
+    if(succ!==null){ bs.style.display=''; bs.textContent='Prossima lezione: '+(CATALOGO[succ].tit||'')+' ›'; bs.onclick=()=>{ document.getElementById('fine').classList.remove('on'); avviaLezione(succ); }; }
+    else bs.style.display='none';
+  }
   document.getElementById('fine').classList.add('on');
   tts(document.getElementById('fineTxt').textContent);
   say(tutto?'Avete completato tutto il viaggio del sale! ✨':'Che classe fantastica! ✨',true);

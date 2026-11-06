@@ -200,7 +200,7 @@
 <!-- APP -->
 <div id="app" class="hidden">
   <div class="top">
-    <span class="logo"><img src="https://www.alessandromilia.it/project/saline/cristalli_di_sale.png" alt="" onerror="this.remove()">REGIA <em>EDU</em> · Sale in Classe <span style="font-size:10px;font-weight:800;background:#efe8db;border-radius:999px;padding:3px 8px;margin-left:6px">v17.1 · abbonamenti</span></span>
+    <span class="logo"><img src="https://www.alessandromilia.it/project/saline/cristalli_di_sale.png" alt="" onerror="this.remove()">REGIA <em>EDU</em> · Sale in Classe <span style="font-size:10px;font-weight:800;background:#efe8db;border-radius:999px;padding:3px 8px;margin-left:6px">v18 · didattica</span></span>
     <span class="sp"></span>
     <span class="who" id="whoami"></span>
     <button class="btn mini" onclick="logout()">Esci</button>
@@ -214,6 +214,7 @@
         <button class="btn ghost" style="width:100%;margin-top:8px" id="btnStats" onclick="apriStats()">📊 Statistiche</button>
         <button class="btn ghost" style="width:100%;margin-top:8px" id="btnScuole" onclick="apriScuole()">🏫 Scuole e classi</button>
         <button class="btn ghost" style="width:100%;margin-top:8px" id="btnCorsi" onclick="apriCorsi()">📚 Corsi</button>
+        <button class="btn ghost" style="width:100%;margin-top:8px" id="btnEsiti" onclick="apriEsiti()">🧾 Esiti e compiti</button>
         <button class="btn ghost hidden" style="width:100%;margin-top:8px" id="btnClienti" onclick="apriClienti()">🏢 Clienti &amp; Licenze</button>
         <button class="btn ghost" style="width:100%;margin-top:8px" id="btnMasc" onclick="apriMascotte()">🎭 Mascotte &amp; progetti</button>
         <div id="soloDesktop">📱 <b>Sei su uno schermo piccolo.</b> La Regia funziona, ma editor delle scene 360, playlist e statistiche sono pensati per il computer: da telefono usa pure le <b>statistiche</b> e i <b>link delle classi</b>, per il resto ti conviene un desktop.</div>
@@ -374,6 +375,20 @@
             <div><label>Condivisibile con altri clienti?</label><select id="coVis"><option value="privato">no, solo di questo cliente</option><option value="catalogo">sì, concedibile in licenza</option></select></div>
             <div style="display:flex;align-items:flex-end"><button class="btn ghost" onclick="apriCatalogo(CORSO_SEL?CORSO_SEL.id:null)">🎞️ Chi può usarlo…</button></div>
           </div>
+          <h2 style="margin-top:18px;font-size:15px">📘 Didattica del corso <span class="hint" style="font-weight:400">— quello che la scuola mette nel PTOF</span></h2>
+          <p class="hint">Compilato qui, compare nella <b>scheda della lezione</b> dentro il player (tasto 📋, solo per il docente) e serve all'UDA da allegare al progetto. Una voce per riga.</p>
+          <div class="grid2">
+            <div><label>Discipline coinvolte (separate da virgola)</label><input id="coDisc" placeholder="storia, geografia, arte e immagine"></div>
+            <div><label>Monte ore indicativo</label><input id="coOre" type="number" min="0" max="200" placeholder="8"></div>
+            <div><label>Traguardi · Primaria (una per riga)</label><textarea id="coTragJ" rows="3" placeholder="riconosce le tracce del passato nel territorio"></textarea></div>
+            <div><label>Traguardi · Medie (una per riga)</label><textarea id="coTragS" rows="3" placeholder="usa fonti materiali per ricostruire un mestiere"></textarea></div>
+          </div>
+          <div class="grid2">
+            <div><label>Prodotto finale atteso</label><input id="coProd" placeholder="cartellone dei mestieri della classe"></div>
+            <div><label>Competenze chiave europee (virgola)</label><input id="coComp" placeholder="consapevolezza culturale, competenza personale e sociale"></div>
+          </div>
+          <label>Verifica e valutazione (come la scuola valuta il percorso)</label>
+          <textarea id="coVer" rows="2" placeholder="prova di ingresso e di uscita, esiti dei quiz, osservazione in aula"></textarea>
           <h2 style="margin-top:18px;font-size:15px">🎭 Mascotte del corso</h2>
           <p class="hint">Ogni corso ha il suo personaggio: nome, immagine e i video dei momenti (benvenuto, fine lezione, fine corso, risposta giusta/sbagliata) per fascia. Vuoto = nessuna mascotte. Puoi <b>importare</b> tutto da un progetto già configurato (es. Coccio dalle saline).</p>
           <div class="grid2">
@@ -394,6 +409,68 @@
             <button class="btn ghost" onclick="eliminaCorso()" style="margin-left:auto;color:#b8506a">Elimina corso</button>
           </div>
           <div id="corsoLez" class="hint" style="margin-top:10px"></div>
+        </div>
+      </div>
+
+      <!-- PANNELLO ESITI E COMPITI -->
+      <div id="esitiPanel" class="hidden">
+        <div class="card">
+          <h2>🧾 Esiti delle lezioni <span class="hint" style="font-weight:400">— l'evidenza da allegare alla valutazione</span></h2>
+          <p class="hint">Ogni quiz svolto in aula, col quiz live o come compito a casa lascia una riga qui. I dati sono <b>di classe</b>: nessun nome di alunno viene registrato. Esporta il CSV per il registro o stampa la scheda per il fascicolo del progetto.</p>
+          <div class="grid3" style="align-items:end">
+            <div><label>Cliente</label><select id="esCliente" onchange="caricaEsiti()"></select></div>
+            <div><label>Classe</label><select id="esClasse" onchange="renderEsiti()"><option value="">tutte</option></select></div>
+            <div><label>Modalità</label><select id="esMod" onchange="renderEsiti()">
+              <option value="">tutte</option><option value="aula">quiz in aula</option><option value="live">quiz live</option>
+              <option value="compito">compito a casa</option><option value="ingresso">prova d'ingresso</option><option value="uscita">prova d'uscita</option></select></div>
+            <div><label>Dal</label><input id="esDa" type="date" onchange="caricaEsiti()"></div>
+            <div><label>Al</label><input id="esA" type="date" onchange="caricaEsiti()"></div>
+            <div style="display:flex;gap:8px;align-items:flex-end">
+              <button class="btn ghost" onclick="esportaEsitiCsv()">⬇ CSV</button>
+              <button class="btn ghost" onclick="stampaEsiti()">🖨️ Scheda</button>
+            </div>
+          </div>
+          <div id="esRiepilogo" class="hint" style="margin-top:10px"></div>
+          <div id="esitiList" style="margin-top:6px;overflow-x:auto"></div>
+        </div>
+
+        <div class="card">
+          <h2>📮 Compiti a casa</h2>
+          <p class="hint">Un compito è una clip da rivedere più qualche domanda: il link si dà alla classe, la correzione la fa il server e l'esito torna qui sopra. Nessun account per gli alunni.</p>
+          <div class="grid3" style="align-items:end">
+            <div><label>Corso</label><select id="cpCorso" onchange="cpCaricaLezioni()"></select></div>
+            <div><label>Lezione</label><select id="cpLezione"></select></div>
+            <div><button class="btn rosa" onclick="nuovoCompito()">＋ Nuovo compito</button></div>
+          </div>
+          <div id="compitiList" style="margin-top:12px"></div>
+        </div>
+
+        <div class="card hidden" id="compitoForm">
+          <h2 id="cpTit">Compito</h2>
+          <div class="grid2">
+            <div><label>Titolo</label><input id="cpTitolo" placeholder="Rivedi la vasca salante"></div>
+            <div><label>Livello</label><select id="cpLiv"><option value="entrambe">Primaria e Medie</option><option value="junior">Primaria</option><option value="senior">Medie</option></select></div>
+            <div><label>Clip: GUID del video (Bunny)</label><input id="cpGuid" placeholder="lo stesso della lezione"></div>
+            <div><label>Scadenza (facoltativa)</label><input id="cpScad" type="date"></div>
+            <div><label>Dal secondo</label><input id="cpDa" type="number" min="0" value="0"></div>
+            <div><label>Al secondo (0 = fino alla fine)</label><input id="cpA" type="number" min="0" value="0"></div>
+          </div>
+          <label>Consegna per la classe</label>
+          <input id="cpConsegna" placeholder="Guarda la clip e rispondi alle domande.">
+          <div style="display:flex;gap:8px;align-items:center;margin:10px 0 4px;flex-wrap:wrap">
+            <h2 style="font-size:15px;margin:0">Domande</h2>
+            <button class="btn mini" onclick="cpCopiaQuiz()">⤓ Copia le domande del quiz della lezione</button>
+            <button class="btn mini" onclick="cpNuovaDomanda()">＋ Domanda</button>
+            <label class="chk" style="margin:0 0 0 auto"><input type="checkbox" id="cpAttivo" checked> attivo</label>
+          </div>
+          <div id="cpDomande"></div>
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+            <button class="btn rosa" onclick="salvaCompito()">Salva compito</button>
+            <button class="btn ghost" onclick="cpCopiaLink()">🔗 Copia il link per la classe</button>
+            <button class="btn ghost" onclick="cpAnteprima()">▶ Provalo</button>
+            <button class="btn ghost" onclick="eliminaCompito()" style="margin-left:auto;color:#b8506a">Elimina</button>
+          </div>
+          <p class="hint" id="cpLink" style="margin-top:8px"></p>
         </div>
       </div>
 
@@ -499,6 +576,29 @@
           <label>Note per i docenti (es. "audio descrizioni registrate", "LIS solo clip 1")</label>
           <input id="fAccNote" placeholder="facoltativo">
           <p class="hint" style="margin-top:8px">Il video LIS si incolla <b>clip per clip</b> nella playlist qui sotto (campo 🤟): deve avere la stessa durata e lo stesso timing della clip 360.</p>
+        </div>
+
+        <!-- SCHEDA DIDATTICA DELLA LEZIONE -->
+        <div class="card">
+          <h2>📋 Scheda didattica della lezione</h2>
+          <p class="hint">È la scheda che il docente apre in aula col tasto <b>📋</b> del player: obiettivi e conduzione, in tre momenti. Una voce per riga dove indicato. Lasciare vuoto se non serve.</p>
+          <div class="grid2">
+            <div><label>Obiettivi · Primaria (uno per riga)</label><textarea id="fObJ" rows="3" placeholder="descrive il lavoro del salinaio con parole sue"></textarea></div>
+            <div><label>Obiettivi · Medie (uno per riga)</label><textarea id="fObS" rows="3" placeholder="spiega il ciclo di produzione del sale"></textarea></div>
+          </div>
+          <div class="grid2">
+            <div><label>Parole chiave (virgola)</label><input id="fParole" placeholder="salina, vasca salante, pala"></div>
+            <div><label>Materiali da preparare (virgola)</label><input id="fMateriali" placeholder="quaderno, sale grosso, lente"></div>
+          </div>
+          <label>Prima di partire (5 minuti di inquadramento, domanda-innesco)</label>
+          <textarea id="fPrima" rows="2" placeholder="Chiedere alla classe da dove arriva il sale che hanno in cucina."></textarea>
+          <label>Durante il video (quando fermarsi, cosa far notare)</label>
+          <textarea id="fDurante" rows="2" placeholder="Fermare alla pala e far descrivere il gesto; aprire la scoperta sulle vasche."></textarea>
+          <label>Dopo, in classe (debriefing e attività)</label>
+          <textarea id="fDopo" rows="2" placeholder="Disegnare la vasca salante e nominarne le parti."></textarea>
+          <label>Collegamenti al libro di testo</label>
+          <input id="fColleg" placeholder="es. Storia, cap. 3 — il lavoro dell'uomo e il paesaggio">
+          <div style="margin-top:10px"><button class="btn rosa" onclick="salvaMeta()">Salva scheda didattica</button></div>
         </div>
 
         <!-- MEDIA -->
@@ -791,6 +891,7 @@ async function apriLezione(id){
   $('fCoccio').value=l.video_coccio||'';
   const acc=l.accessibilita||{};
   $('fAccIpo').checked=acc.ipovedenti!==false; $('fAccLis').checked=!!acc.lis; $('fAccNote').value=acc.note||'';
+  didatticaLezCarica(l.didattica);
   $('mascPanel').classList.add('hidden');
   renderMedia(); renderTappe(); renderQuiz(); caricaMediaNelViewer(); aggiornaLisInfo();
   caricaLezioni();
@@ -802,6 +903,7 @@ async function salvaMeta(){
     video_coccio:$('fCoccio').value.trim()||null,
     corso_id:($('fCorso').value||null), progetto:progettoDelCorso($('fCorso').value)||LEZ.progetto,
     accessibilita:{ipovedenti:$('fAccIpo').checked,lis:$('fAccLis').checked,note:$('fAccNote').value.trim()},
+    didattica:didatticaLezPayload(),
     aggiornato_il:new Date().toISOString()};
   const {error}=await sb.from('edu_lezioni').update(upd).eq('id',LEZ.id);
   if(error){ toast('Errore: '+error.message); return; }
@@ -965,6 +1067,7 @@ function apriCorso(id){
   $('coOrd').value=co.ordine||0; $('coDesc').value=co.descrizione||''; $('coProl').value=co.prologo||'';
   const mc=co.mascotte||{}; $('coMascNome').value=mc.nome||''; $('coMascImg').value=mc.img||''; $('coVis').value=co.visibilita||'privato';
   $('coMascJun').checked=mc.junior!==false; $('coMascSen').checked=mc.senior!==false; $('coMascQuiz').checked=mc.quiz_sempre!==false;
+  didatticaCorsoCarica(co.didattica);
   renderMascotteCorso(mc.video||{}); riempiImportaMascotte();
   $('corsoForm').classList.remove('hidden'); renderCorsi();
   sb.from('edu_lezioni').select('titolo,stato').eq('corso_id',co.id).order('ordine').then(r=>{
@@ -985,6 +1088,7 @@ async function salvaCorso(){
     emoji:$('coEm').value.trim()||'📚',colore:$('coCol').value,fascia:$('coFascia').value,stato:$('coStato').value,
     ordine:parseInt($('coOrd').value||0,10),descrizione:$('coDesc').value.trim()||null,prologo:($('coProl').value.trim()||null),
     visibilita:$('coVis').value,
+    didattica:didatticaCorsoPayload(),
     mascotte:mascotteCorsoPayload()};
   if(!upd.titolo||!/^[a-z0-9][a-z0-9-]{1,40}$/.test(upd.slug)){ toast('Titolo obbligatorio e slug solo minuscole/numeri/trattini'); return; }
   if(upd.stato==='pubblicato'&&CORSO_SEL.stato!=='pubblicato'&&!(await corsoPubblicabile(CORSO_SEL)))return;   /* limite del piano */
@@ -1000,6 +1104,282 @@ async function eliminaCorso(){
   CORSO_SEL=null; $('corsoForm').classList.add('hidden'); await caricaTenant(); renderCorsi(); caricaLezioni(); toast('Corso eliminato');
 }
 function apriPlayerCliente(){ const cl=CLIENTI.find(c=>c.id===$('cCliente').value); if(cl)window.open(APP_BASE+cl.slug+'/','_blank'); }
+
+/* ==================== DIDATTICA (migr. 32) ==================== */
+const righe=(s)=>String(s||'').split('\n').map(x=>x.trim()).filter(Boolean);
+const virgole=(s)=>String(s||'').split(',').map(x=>x.trim()).filter(Boolean);
+function didatticaCorsoPayload(){
+  const d={};
+  const disc=virgole($('coDisc').value), comp=virgole($('coComp').value);
+  const tj=righe($('coTragJ').value), ts=righe($('coTragS').value);
+  const ore=parseInt($('coOre').value||'0',10), prod=$('coProd').value.trim(), ver=$('coVer').value.trim();
+  if(disc.length)d.discipline=disc;
+  if(comp.length)d.competenze_chiave=comp;
+  if(tj.length||ts.length)d.traguardi={primaria:tj,medie:ts};
+  const uda={};
+  if(ore>0)uda.monte_ore=ore;
+  if(prod)uda.prodotto_finale=prod;
+  if(ver)uda.verifica=ver;
+  if(Object.keys(uda).length)d.uda=uda;
+  return d;
+}
+function didatticaCorsoCarica(d){
+  d=d||{};
+  const t=d.traguardi||{}, u=d.uda||{};
+  $('coDisc').value=(d.discipline||[]).join(', ');
+  $('coComp').value=(d.competenze_chiave||[]).join(', ');
+  $('coTragJ').value=(t.primaria||[]).join('\n');
+  $('coTragS').value=(t.medie||[]).join('\n');
+  $('coOre').value=u.monte_ore||'';
+  $('coProd').value=u.prodotto_finale||'';
+  $('coVer').value=u.verifica||'';
+}
+function didatticaLezPayload(){
+  const d={};
+  const oj=righe($('fObJ').value), os=righe($('fObS').value);
+  if(oj.length||os.length)d.obiettivi={primaria:oj,medie:os};
+  const pk=virgole($('fParole').value); if(pk.length)d.parole_chiave=pk;
+  const mt=virgole($('fMateriali').value); if(mt.length)d.materiali=mt;
+  ['prima','durante','dopo'].forEach(k=>{ const v=$('f'+k.charAt(0).toUpperCase()+k.slice(1)).value.trim(); if(v)d[k]=v; });
+  const col=$('fColleg').value.trim(); if(col)d.collegamenti=col;
+  return d;
+}
+function didatticaLezCarica(d){
+  d=d||{}; const o=d.obiettivi||{};
+  $('fObJ').value=(o.primaria||[]).join('\n');
+  $('fObS').value=(o.medie||[]).join('\n');
+  $('fParole').value=(d.parole_chiave||[]).join(', ');
+  $('fMateriali').value=(d.materiali||[]).join(', ');
+  $('fPrima').value=d.prima||''; $('fDurante').value=d.durante||''; $('fDopo').value=d.dopo||'';
+  $('fColleg').value=d.collegamenti||'';
+}
+
+/* ==================== ESITI (migr. 32) ==================== */
+let ESITI=[], COMPITI=[], COMPITO_SEL=null, CP_DOM=[];
+const MOD_IT={aula:'quiz in aula',live:'quiz live',compito:'compito a casa',ingresso:"prova d'ingresso",uscita:"prova d'uscita"};
+
+function apriEsiti(){
+  nascondiTutto(); $('esitiPanel').classList.remove('hidden');
+  if(!selectClienti($('esCliente'))){ $('esitiList').innerHTML='<p class="hint">Nessun cliente disponibile.</p>'; return; }
+  riempiSelectCorsi($('cpCorso'), '');
+  cpCaricaLezioni();
+  caricaEsiti();
+}
+function chiudiEsiti(){ $('esitiPanel').classList.add('hidden'); $('benv').classList.remove('hidden'); }
+
+async function caricaEsiti(){
+  const cl=CLIENTI.find(c=>c.slug===$('esCliente').value); if(!cl)return;
+  let q=sb.from('edu_esiti').select('*').eq('cliente_id',cl.id).order('svolto_il',{ascending:false}).limit(1000);
+  const da=$('esDa').value, a=$('esA').value;
+  if(da)q=q.gte('svolto_il',da+'T00:00:00Z');
+  if(a) q=q.lte('svolto_il',a+'T23:59:59Z');
+  const {data,error}=await q;
+  if(error){ toast('Errore: '+error.message); return; }
+  ESITI=data||[];
+  const classi=[...new Set(ESITI.map(e=>e.codice_classe))].sort();
+  const sel=$('esClasse'), prec=sel.value;
+  sel.innerHTML='<option value="">tutte le classi</option>'+classi.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('');
+  if(classi.indexOf(prec)>=0)sel.value=prec;
+  await caricaCompiti();
+  renderEsiti();
+}
+function esitiFiltrati(){
+  const c=$('esClasse').value, m=$('esMod').value;
+  return ESITI.filter(e=>(!c||e.codice_classe===c)&&(!m||e.modalita===m));
+}
+function renderEsiti(){
+  const r=esitiFiltrati();
+  if(!r.length){ $('esRiepilogo').textContent=''; $('esitiList').innerHTML='<p class="hint">Nessun esito per questi filtri. Gli esiti arrivano quando una classe completa un quiz nel player.</p>'; return; }
+  const medie=(arr)=>arr.length?Math.round(arr.reduce((s,x)=>s+x,0)/arr.length):null;
+  const pctAll=r.filter(e=>e.pct!==null).map(e=>e.pct);
+  const ing=medie(r.filter(e=>e.modalita==='ingresso'&&e.pct!==null).map(e=>e.pct));
+  const usc=medie(r.filter(e=>e.modalita==='uscita'&&e.pct!==null).map(e=>e.pct));
+  $('esRiepilogo').innerHTML='<b>'+r.length+'</b> esiti · media '+pct(medie(pctAll))+
+    ' · classi coinvolte: <b>'+new Set(r.map(e=>e.codice_classe)).size+'</b>'+
+    ((ing!==null&&usc!==null)?' · <b>ingresso '+pct(ing)+' → uscita '+pct(usc)+'</b> ('+(usc-ing>=0?'+':'')+(usc-ing)+' punti)':'');
+  $('esitiList').innerHTML='<table class="tab"><thead><tr><th>Data</th><th>Classe</th><th>Corso / lezione</th><th>Modalità</th><th>Alunni</th><th>Punteggio</th><th>%</th><th>Note</th></tr></thead><tbody>'+
+    r.map(e=>'<tr><td>'+dataIt(e.svolto_il)+'</td><td>'+esc(e.codice_classe)+'</td><td>'+esc(e.corso_titolo||'—')+
+      '<br><span class="hint">'+esc(e.lezione_titolo||e.lezione_slug)+'</span></td><td>'+esc(MOD_IT[e.modalita]||e.modalita)+
+      '</td><td>'+(e.n_partecipanti===null?'—':e.n_partecipanti)+'</td><td>'+e.n_giuste+' / '+e.n_domande+'</td><td><b>'+pct(e.pct)+'</b></td><td>'+esc(e.note||'')+'</td></tr>').join('')+
+    '</tbody></table>';
+}
+function esportaEsitiCsv(){
+  const r=esitiFiltrati();
+  if(!r.length){ toast('Niente da esportare'); return; }
+  const cap=['data','classe','scuola_id','corso','lezione','modalita','livello','alunni','risposte_giuste','domande','percentuale','note'];
+  const sep=';';                              /* Excel italiano apre il ; senza chiedere nulla */
+  const q=(v)=>'"'+String(v===null||v===undefined?'':v).replace(/"/g,'""')+'"';
+  const righeCsv=[cap.join(sep)].concat(r.map(e=>[dataIt(e.svolto_il),e.codice_classe,e.scuola_id||'',e.corso_titolo||'',
+    e.lezione_titolo||e.lezione_slug,MOD_IT[e.modalita]||e.modalita,e.livello||'',e.n_partecipanti===null?'':e.n_partecipanti,
+    e.n_giuste,e.n_domande,e.pct===null?'':e.pct,e.note||''].map(q).join(sep)));
+  const blob=new Blob(['\ufeff'+righeCsv.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='esiti-'+($('esClasse').value||'tutte')+'-'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  toast(r.length+' esiti esportati');
+}
+function stampaEsiti(){
+  const r=esitiFiltrati();
+  if(!r.length){ toast('Niente da stampare'); return; }
+  const cl=CLIENTI.find(c=>c.slug===$('esCliente').value);
+  const classe=$('esClasse').value||'tutte le classi';
+  const per=($('esDa').value||$('esA').value)?((($('esDa').value||'…')+' → '+($('esA').value||'…'))):'intero periodo';
+  const pctAll=r.filter(e=>e.pct!==null).map(e=>e.pct);
+  const media=pctAll.length?Math.round(pctAll.reduce((s,x)=>s+x,0)/pctAll.length):null;
+  const w=window.open('','_blank');
+  if(!w){ toast('Il browser ha bloccato la finestra di stampa'); return; }
+  w.document.write('<!doctype html><html lang="it"><head><meta charset="utf-8"><title>Esiti '+esc(classe)+'</title>'+
+   '<style>body{font:13px/1.5 system-ui,sans-serif;color:#222;margin:28px}h1{font-size:19px;margin:0 0 2px}'+
+   '.sub{color:#555;margin:0 0 16px}table{border-collapse:collapse;width:100%;font-size:12px}'+
+   'th,td{border:1px solid #bbb;padding:6px 8px;text-align:left}th{background:#f1ece4}'+
+   '.r{text-align:right}.firma{margin-top:40px;display:flex;gap:40px}.firma div{flex:1;border-top:1px solid #888;padding-top:6px;color:#555}'+
+   '@media print{@page{margin:14mm}}</style></head><body>'+
+   '<h1>Esiti delle attività · '+esc(cl?cl.nome:'')+'</h1>'+
+   '<p class="sub">Classe: <b>'+esc(classe)+'</b> · Periodo: '+esc(per)+' · Esiti: <b>'+r.length+'</b>'+
+   (media!==null?' · Media delle risposte corrette: <b>'+media+'%</b>':'')+'</p>'+
+   '<table><thead><tr><th>Data</th><th>Classe</th><th>Corso / lezione</th><th>Modalità</th><th class="r">Alunni</th><th class="r">Punteggio</th><th class="r">%</th></tr></thead><tbody>'+
+   r.map(e=>'<tr><td>'+dataIt(e.svolto_il)+'</td><td>'+esc(e.codice_classe)+'</td><td>'+esc((e.corso_titolo||'—')+' — '+(e.lezione_titolo||e.lezione_slug))+
+     '</td><td>'+esc(MOD_IT[e.modalita]||e.modalita)+'</td><td class="r">'+(e.n_partecipanti===null?'—':e.n_partecipanti)+
+     '</td><td class="r">'+e.n_giuste+'/'+e.n_domande+'</td><td class="r">'+pct(e.pct)+'</td></tr>').join('')+
+   '</tbody></table>'+
+   '<p class="sub" style="margin-top:14px;font-size:11px">Dati aggregati per classe: la piattaforma non registra dati personali degli alunni. '+
+   'Documento generato da Esplora Trapani Edu il '+new Date().toLocaleDateString('it-IT')+'.</p>'+
+   '<div class="firma"><div>Il docente</div><div>Il dirigente scolastico</div></div>'+
+   '</body></html>');
+  w.document.close(); w.focus();
+  setTimeout(()=>{ try{w.print();}catch(e){} },300);
+}
+
+/* ==================== COMPITI (migr. 32) ==================== */
+let CP_LEZ=[];
+async function cpCaricaLezioni(){
+  const idCorso=$('cpCorso').value||null;
+  if(!idCorso){ CP_LEZ=[]; $('cpLezione').innerHTML='<option value="">(scegli un corso)</option>'; return; }
+  const {data,error}=await sb.from('edu_lezioni').select('id,slug,titolo,corso_id,owner,stato')
+                             .eq('corso_id',idCorso).order('ordine');
+  CP_LEZ=error?[]:(data||[]).filter(l=>!l.owner);
+  $('cpLezione').innerHTML=CP_LEZ.length?CP_LEZ.map(l=>'<option value="'+esc(l.slug)+'">'+esc(l.titolo)+'</option>').join('')
+    :'<option value="">(nessuna lezione in questo corso)</option>';
+}
+async function caricaCompiti(){
+  const cl=CLIENTI.find(c=>c.slug===$('esCliente').value); if(!cl){ COMPITI=[]; renderCompiti(); return; }
+  const {data,error}=await sb.from('edu_compiti').select('*').eq('cliente_id',cl.id).order('creato_il',{ascending:false});
+  if(error){ COMPITI=[]; renderCompiti(); return; }
+  COMPITI=data||[]; renderCompiti();
+}
+function renderCompiti(){
+  if(!COMPITI.length){ $('compitiList').innerHTML='<p class="hint">Nessun compito. Scegli corso e lezione qui sopra e premi «Nuovo compito».</p>'; return; }
+  $('compitiList').innerHTML=COMPITI.map(k=>{
+    const n=ESITI.filter(e=>e.modalita==='compito'&&e.dettaglio&&e.dettaglio.compito===k.codice).length;
+    return '<button class="lezItem'+(COMPITO_SEL&&COMPITO_SEL.id===k.id?' on':'')+'" onclick="apriCompito(\''+k.id+'\')">'+
+      '<strong>'+esc(k.titolo)+'</strong><span class="hint">'+esc(k.lezione_slug)+' · codice '+esc(k.codice)+
+      (k.attivo?'':' · <b>chiuso</b>')+(k.scadenza?' · entro il '+dataIt(k.scadenza):'')+' · consegne: '+n+'</span></button>';
+  }).join('');
+}
+function cpCodice(){ let s=''; const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; for(let i=0;i<8;i++)s+=A[Math.floor(Math.random()*A.length)]; return s; }
+function nuovoCompito(){
+  const slug=$('cpLezione').value;
+  if(!slug){ toast('Scegli prima un corso con almeno una lezione'); return; }
+  const lz=CP_LEZ.find(l=>l.slug===slug);
+  COMPITO_SEL={id:null,codice:cpCodice(),lezione_slug:slug,corso_id:$('cpCorso').value||null,
+    titolo:'Compito: '+(lz?lz.titolo:slug),consegna:'Guarda la clip e rispondi alle domande.',
+    livello:'entrambe',clip:{},domande:[],attivo:true,scadenza:null};
+  CP_DOM=[]; mostraCompito();
+}
+async function apriCompito(id){
+  COMPITO_SEL=COMPITI.find(k=>k.id===id)||null;
+  if(!COMPITO_SEL)return;
+  CP_DOM=JSON.parse(JSON.stringify(COMPITO_SEL.domande||[]));
+  mostraCompito(); renderCompiti();
+}
+function mostraCompito(){
+  const k=COMPITO_SEL; if(!k)return;
+  $('compitoForm').classList.remove('hidden');
+  $('cpTit').textContent=k.id?('Compito · '+k.codice):('Nuovo compito · '+k.codice);
+  $('cpTitolo').value=k.titolo||''; $('cpConsegna').value=k.consegna||'';
+  $('cpLiv').value=k.livello||'entrambe'; $('cpAttivo').checked=k.attivo!==false;
+  $('cpScad').value=k.scadenza||'';
+  const c=k.clip||{};
+  $('cpGuid').value=c.guid||''; $('cpDa').value=c.da||0; $('cpA').value=c.a||0;
+  cpRenderDomande(); cpMostraLink();
+}
+function cpMostraLink(){
+  const k=COMPITO_SEL; if(!k){ $('cpLink').textContent=''; return; }
+  const cl=CLIENTI.find(c=>c.slug===$('esCliente').value);
+  const url=APP_BASE+'app/compito.php?k='+k.codice+(cl?'&c='+cl.slug:'');
+  $('cpLink').innerHTML=k.id?('Link per la classe: <code>'+esc(url)+'</code> — si può aggiungere <code>&amp;classe=CODICE</code> per legare le consegne a una classe.')
+                            :'Salva il compito per ottenere il link.';
+}
+function cpNuovaDomanda(){ CP_DOM.push({domanda:'',opzioni:['',''],ok:0}); cpRenderDomande(); }
+function cpRenderDomande(){
+  if(!CP_DOM.length){ $('cpDomande').innerHTML='<p class="hint">Nessuna domanda: aggiungine almeno una, o copia quelle del quiz della lezione.</p>'; return; }
+  $('cpDomande').innerHTML=CP_DOM.map((d,i)=>
+    '<div class="card" style="padding:10px;margin:8px 0">'+
+    '<label>Domanda '+(i+1)+'</label><input value="'+esc(d.domanda||'')+'" oninput="CP_DOM['+i+'].domanda=this.value">'+
+    '<label>Opzioni (una per riga) · segna la giusta col numero sotto</label>'+
+    '<textarea rows="3" oninput="CP_DOM['+i+'].opzioni=this.value.split(\'\\n\').map(x=>x.trim()).filter(Boolean)">'+esc((d.opzioni||[]).join('\n'))+'</textarea>'+
+    '<div class="grid2"><div><label>Risposta giusta (numero di riga, da 1)</label>'+
+    '<input type="number" min="1" max="8" value="'+((d.ok||0)+1)+'" oninput="CP_DOM['+i+'].ok=Math.max(0,parseInt(this.value||1,10)-1)"></div>'+
+    '<div style="display:flex;align-items:flex-end"><button class="btn mini" onclick="CP_DOM.splice('+i+',1);cpRenderDomande()">Togli</button></div></div></div>').join('');
+}
+async function cpCopiaQuiz(){
+  const k=COMPITO_SEL; if(!k)return;
+  let lz=CP_LEZ.find(l=>l.slug===k.lezione_slug);
+  if(!lz){ const {data}=await sb.from('edu_lezioni').select('id,slug,titolo').eq('slug',k.lezione_slug).limit(1); lz=(data||[])[0]; }
+  if(!lz){ toast('Lezione non trovata'); return; }
+  const liv=(k.livello==='senior')?'senior':'junior';
+  const {data,error}=await sb.from('edu_quiz').select('*').eq('lezione_id',lz.id).order('ordine');
+  if(error){ toast('Errore: '+error.message); return; }
+  const q=(data||[]).filter(x=>!x.livello||x.livello===liv||x.livello==='entrambi');
+  if(!q.length){ toast('Il quiz di questa lezione è vuoto'); return; }
+  CP_DOM=q.map(x=>({domanda:x.domanda,opzioni:(x.opzioni||[]).slice(),ok:x.ok||0}));
+  cpRenderDomande(); toast(CP_DOM.length+' domande copiate dal quiz');
+}
+async function salvaCompito(){
+  const k=COMPITO_SEL; if(!k)return;
+  const cl=CLIENTI.find(c=>c.slug===$('esCliente').value); if(!cl){ toast('Scegli il cliente'); return; }
+  const tit=$('cpTitolo').value.trim();
+  if(!tit){ toast('Il titolo è obbligatorio'); return; }
+  const dom=CP_DOM.filter(d=>String(d.domanda||'').trim()&&(d.opzioni||[]).length>=2);
+  if(dom.length!==CP_DOM.length){ toast('Ogni domanda vuole un testo e almeno due opzioni'); return; }
+  if(dom.some(d=>d.ok>=d.opzioni.length)){ toast('La risposta giusta indica una riga che non esiste'); return; }
+  const da=parseInt($('cpDa').value||0,10), a=parseInt($('cpA').value||0,10);
+  if(a>0&&a<=da){ toast('Il secondo finale deve essere maggiore di quello iniziale'); return; }
+  const upd={cliente_id:cl.id,corso_id:k.corso_id||null,lezione_slug:k.lezione_slug,codice:k.codice,
+    titolo:tit,consegna:$('cpConsegna').value.trim()||null,livello:$('cpLiv').value,
+    clip:{guid:$('cpGuid').value.trim(),da:da,a:a},domande:dom,
+    attivo:$('cpAttivo').checked,scadenza:$('cpScad').value||null};
+  let error;
+  if(k.id){ ({error}=await sb.from('edu_compiti').update(upd).eq('id',k.id)); }
+  else    { ({error}=await sb.from('edu_compiti').insert(upd)); }
+  if(error){ toast('Errore: '+error.message); return; }
+  toast('Compito salvato');
+  await caricaCompiti();
+  COMPITO_SEL=COMPITI.find(x=>x.codice===k.codice)||COMPITO_SEL;
+  CP_DOM=JSON.parse(JSON.stringify((COMPITO_SEL&&COMPITO_SEL.domande)||[]));
+  mostraCompito(); renderCompiti();
+}
+async function eliminaCompito(){
+  const k=COMPITO_SEL; if(!k||!k.id)return;
+  if(!confirm('Eliminare il compito «'+k.titolo+'»? Gli esiti già consegnati restano negli esiti.'))return;
+  const {error}=await sb.from('edu_compiti').delete().eq('id',k.id);
+  if(error){ toast('Errore: '+error.message); return; }
+  COMPITO_SEL=null; $('compitoForm').classList.add('hidden'); await caricaCompiti(); toast('Compito eliminato');
+}
+function cpUrl(){
+  const k=COMPITO_SEL; if(!k)return '';
+  const cl=CLIENTI.find(c=>c.slug===$('esCliente').value);
+  return APP_BASE+'app/compito.php?k='+k.codice+(cl?'&c='+cl.slug:'');
+}
+function cpCopiaLink(){
+  const k=COMPITO_SEL;
+  if(!k||!k.id){ toast('Salva prima il compito'); return; }
+  const u=cpUrl();
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(u).then(()=>toast('Link copiato')).catch(()=>toast(u)); }
+  else toast(u);
+}
+function cpAnteprima(){ const k=COMPITO_SEL; if(!k||!k.id){ toast('Salva prima il compito'); return; } window.open(cpUrl(),'_blank'); }
 
 /* ---- CLIENTI & LICENZE (admin) ---- */
 async function apriClienti(){
@@ -1270,7 +1650,7 @@ async function duplicaCorso(){
 
 /* ======================= FASE 4 · statistiche, classi, richieste, piani ======================= */
 function chiudiPannello(id){ $(id).classList.add('hidden'); if(LEZ)$('lezEditor').classList.remove('hidden'); else $('benv').classList.remove('hidden'); }
-function nascondiTutto(){ ['benv','lezEditor','mascPanel','corsiPanel','cliPanel','statsPanel','scuolePanel','catPanel'].forEach(i=>{const e=$(i); if(e)e.classList.add('hidden');}); }
+function nascondiTutto(){ ['benv','lezEditor','mascPanel','corsiPanel','cliPanel','statsPanel','scuolePanel','catPanel','esitiPanel'].forEach(i=>{const e=$(i); if(e)e.classList.add('hidden');}); }
 function selectClienti(sel){ const vis=clientiVisibili(); sel.innerHTML=vis.map(cl=>'<option value="'+cl.slug+'">'+esc(cl.nome)+'</option>').join(''); return vis.length; }
 function pct(n){ return (n===null||n===undefined)?'—':n+'%'; }
 function dataIt(s){ if(!s)return '—'; const d=new Date(s); return isNaN(d)?s:d.toLocaleDateString('it-IT'); }
