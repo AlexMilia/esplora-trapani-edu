@@ -74,6 +74,10 @@ let p=0,f=0; const ok=(n,c)=>{c?(p++,console.log('  ✓ '+n)):(f++,console.log('
   ok('📋 scheda della lezione presente', !!d.getElementById('btnScheda'));
   ok('fuori da una lezione i tasti ‹ › sono spenti',
      d.getElementById('btnPrec').disabled && d.getElementById('btnSucc').disabled);
+  ok('…e con il menu aperto sono spenti anche i comandi del video (non devono sembrare cliccabili)',
+     ['btnIndietro','btnPausa','btnAvanti','btnElenco','btnScheda'].every(i=>d.getElementById(i).disabled));
+  ok('la scheda non si apre se non c è una lezione in corso',
+     (()=>{ w.apriScheda(); return !d.getElementById('scheda').classList.contains('on'); })());
 
   console.log('— B. percorso della classe nel menu (diario dal server) —');
   ok('il diario è stato chiesto al server col codice classe',
@@ -101,6 +105,9 @@ let p=0,f=0; const ok=(n,c)=>{c?(p++,console.log('  ✓ '+n)):(f++,console.log('
   ok('all inizio del video non va in negativo', v.currentTime===0);
   v.currentTime=118; w.saltaVideo(10);
   ok('alla fine del video non supera la durata', v.currentTime<=119.7 && v.currentTime>=119.6);
+
+  ok('avviata la lezione, i comandi del video si riaccendono',
+     ['btnIndietro','btnPausa','btnAvanti','btnScheda'].every(i=>!d.getElementById(i).disabled));
 
   console.log('— D. lezione precedente e successiva —');
   w.updNav();

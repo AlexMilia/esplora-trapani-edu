@@ -355,9 +355,9 @@ window.EDU_BASE = <?php echo json_encode(rtrim(dirname($_SERVER['SCRIPT_NAME'] ?
 <div class="teachbar">
   <span class="tit"><span id="brandTit"><?php echo $B('titolo'); ?></span> <em id="brandSub" style="opacity:.7;font-weight:400"><?php echo $B('sottotitolo'); ?></em> <img class="cimg-mini" src="<?php echo $B('mascotte_img'); ?>" alt="" onerror="this.remove()"><span class="demotag" style="opacity:.5;font-size:12px"> · demo</span></span>
   <span class="sp"></span>
-  <button class="tbtn" id="btnIndietro" onclick="saltaVideo(-10)" aria-label="Indietro di 10 secondi" title="Indietro di 10 secondi">⏪<span class="lbl"> 10s</span></button>
+  <button class="tbtn" id="btnIndietro" onclick="saltaVideo(-10)" aria-label="Indietro di 10 secondi" title="Indietro di 10 secondi">−10s</button>
   <button class="tbtn" id="btnPausa" onclick="togglePausa()">⏸<span class="lbl"> Pausa</span></button>
-  <button class="tbtn" id="btnAvanti" onclick="saltaVideo(10)" aria-label="Avanti di 10 secondi" title="Avanti di 10 secondi">⏩<span class="lbl"> 10s</span></button>
+  <button class="tbtn" id="btnAvanti" onclick="saltaVideo(10)" aria-label="Avanti di 10 secondi" title="Avanti di 10 secondi">+10s</button>
   <button class="tbtn" onclick="prossimaTappa()" aria-label="Prossima scoperta">⏭<span class="lbl"> Prossima scoperta</span></button>
   <button class="tbtn" id="btnElenco" onclick="apriElenco()" aria-label="Elenco delle scoperte">📖</button>
   <button class="tbtn" id="btnScheda" onclick="apriScheda()" aria-label="Scheda della lezione per il docente" title="Scheda della lezione (per il docente)">📋</button>
@@ -1276,18 +1276,26 @@ function updNav(){
   const nessuna=(typeof lezIdx!=='number')||!LEZ;
   p.disabled=nessuna||vicina(-1)===null;
   s.disabled=nessuna||vicina(1)===null;
-  p.style.opacity=p.disabled?.35:1; s.style.opacity=s.disabled?.35:1;
+  /* i comandi che agiscono sulla lezione non devono sembrare cliccabili quando
+     siamo nel menu: in aula il docente ci prova e non capisce perché non succede nulla */
+  const inLezione=!!LEZ&&started;
+  ['btnIndietro','btnPausa','btnAvanti','btnElenco','btnScheda'].forEach(id=>{
+    const b=document.getElementById(id); if(b)b.disabled=!inLezione;
+  });
+  document.querySelectorAll('.teachbar .tbtn').forEach(b=>{ b.style.opacity=b.disabled?.35:1; });
 }
 
 /* ---- scheda della lezione: obiettivi e conduzione, per il docente ---- */
 function apriScheda(){
-  const d=(LEZ&&LEZ.didattica)||{}, dc=(LEZ&&LEZ.corso&&LEZ.corso.didattica)||{};
+  if(!LEZ){ say('Aprite prima una lezione: la scheda è quella della lezione in corso.',true); return; }
+  const d=LEZ.didattica||{}, dc=(LEZ.corso&&LEZ.corso.didattica)||{};
   const liv=(LIVELLO==='senior')?'medie':'primaria';
   const box=document.getElementById('schedaBody');
   const righe=[];
   const lista=(tit,arr)=>{ if(arr&&arr.length)righe.push('<h2 style="font-size:17px;margin:14px 0 4px">'+tit+'</h2><ul style="margin:0 0 6px 18px">'+arr.map(x=>'<li>'+esc(String(x))+'</li>').join('')+'</ul>'); };
   const para=(tit,txt)=>{ if(txt&&String(txt).trim())righe.push('<h2 style="font-size:17px;margin:14px 0 4px">'+tit+'</h2><p style="margin:0 0 6px">'+esc(String(txt))+'</p>'); };
-  righe.push('<p style="margin:0"><b>'+esc(LEZ?LEZ.tit:'')+'</b>'+(LEZ&&LEZ.corso?' · '+esc(LEZ.corso.tit):'')+' · '+(LIVELLO==='senior'?'medie 11–13':'primaria 8–10')+'</p>');
+  const testa=[LEZ.tit, LEZ.corso&&LEZ.corso.tit, (LIVELLO==='senior'?'medie 11–13':'primaria 8–10')].filter(Boolean);
+  righe.push('<p style="margin:0"><b>'+esc(testa[0])+'</b>'+(testa.length>1?' · '+testa.slice(1).map(esc).join(' · '):'')+'</p>');
   lista('Obiettivi di questa lezione',(d.obiettivi&&d.obiettivi[liv])||[]);
   lista('Traguardi del percorso',(dc.traguardi&&dc.traguardi[liv])||[]);
   lista('Parole chiave',d.parole_chiave||[]);

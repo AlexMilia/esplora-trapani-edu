@@ -63,6 +63,23 @@ if ($p==='/rest/v1/rpc/edu_compito_valuta'){
   $S['esiti'][]=['modalita'=>'compito','classe'=>$j['p_classe']??'','n_giuste'=>$n,'n_domande'=>count($giuste),'risposte'=>$r];
   out(['ok'=>true,'n_domande'=>count($giuste),'n_giuste'=>$n,'esito'=>$es]);
 }
+if ($p==='/rest/v1/rpc/edu_get_lezione_tenant') out([
+  'id'=>'salinaio','tit'=>'Il salinaio','intro'=>'Guardate le vasche','coccio'=>null,
+  'didattica'=>[
+    'obiettivi'=>['primaria'=>['descrive il lavoro del salinaio con parole sue','riconosce gli attrezzi del mestiere'],
+                  'medie'=>['spiega il ciclo di produzione del sale']],
+    'parole_chiave'=>['salina','vasca salante','pala','cristallizzazione'],
+    'prima'=>'Chiedere alla classe da dove arriva il sale che hanno in cucina. Raccogliere tre ipotesi alla lavagna.',
+    'durante'=>'Fermare il video quando il salinaio solleva la pala: far descrivere il gesto e il peso. Aprire la scoperta sulle vasche.',
+    'dopo'=>'Disegnare la vasca salante e nominarne le parti con le parole chiave.',
+    'materiali'=>['quaderno','sale grosso da toccare'],
+    'collegamenti'=>'Storia, cap. 3 — il lavoro dell uomo e il paesaggio'],
+  'corso'=>['id'=>'mestieri','uuid'=>'co-1','tit'=>'Antichi Mestieri','prologo'=>null,'mascotte'=>[],
+    'didattica'=>['traguardi'=>['primaria'=>['riconosce le tracce del passato nel territorio'],'medie'=>['usa fonti materiali']],
+                  'discipline'=>['storia','geografia']]],
+  'video'=>[['guid'=>'g-sal']],'tappe'=>[],
+  'quiz'=>[['q'=>'Come si chiama la vasca dove cristallizza il sale?','opts'=>['Vasca salante','Vasca fredda'],'ok'=>0]],
+  'quiz2'=>null]);
 if ($p==='/rest/v1/rpc/edu_get_mascotte') out([]);
 if ($p==='/rest/v1/edu_eventi') out([],201);
 out(['message'=>'mock: rotta non gestita '.$p],404);
