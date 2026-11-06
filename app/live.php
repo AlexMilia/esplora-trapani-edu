@@ -131,10 +131,14 @@ function pulisci_nome(string $n): string {
   return taglia($n, $MAX_NOME);
 }
 
-/* garbage collection stanze vecchie (best effort, 1 volta su ~20) */
-function gc(): void {
+/* Pulizia delle stanze vecchie. Nelle azioni frequenti (polling, risposte) si
+   fa 1 volta su ~20 per non sprecare I/O; quando si CREA una partita si fa
+   sempre ($sempre=true), perché è l'azione rara.
+   Non è un dettaglio tecnico: l'informativa alle famiglie dice che i soprannomi
+   del quiz sparaiscono in poche ore, e questa funzione è ciò che lo garantisce. */
+function gc(bool $sempre = false): void {
   global $LIVE_DIR, $TTL_STANZA;
-  if (random_int(0, 19) !== 0) return;
+  if (!$sempre && random_int(0, 19) !== 0) return;
   foreach (glob($LIVE_DIR . '/*.json') ?: [] as $f) {
     if (time() - (int)@filemtime($f) > $TTL_STANZA) @unlink($f);
   }
@@ -149,10 +153,10 @@ if (!is_dir($LIVE_DIR)) {
 }
 if (!is_writable($LIVE_DIR)) fail('dati/live non scrivibile', 500);
 
-gc();
-
 $action = $_GET['action'] ?? '';
 $B = body();
+
+gc($action === 'crea');   /* alla creazione di una partita la pulizia è certa */
 
 /* limiti per IP: stanze nuove poche, tentativi d'ingresso moderati, polling ampio */
 if ($action === 'crea' && !live_throttle('crea', 20, 600))  fail('Troppe stanze create da questa rete: riprova fra qualche minuto', 429);

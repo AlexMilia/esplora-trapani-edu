@@ -8,6 +8,7 @@ npm install                 # una volta: installa jsdom
 npm test                    # player + regia + analisi statica (15 suite, 281 verifiche)
 bash test/t_api26.sh        # api.php offline (cache precompilata, server PHP integrato)
 bash test/t_didattica_api.sh # esiti, diario, compiti su un Supabase finto (30 verifiche)
+bash test/t_live_gc.sh      # le stanze del quiz live spariscono dopo 3 ore (privacy dichiarata)
 bash test/t_stripe_avvia.sh # stripe.php + webhook + setup contro Stripe/Supabase finti (28 verifiche)
 DBURL=postgresql://utente:password@127.0.0.1/edu_test bash test/db_avvia.sh   # migrazioni + RLS + flussi (vedi sotto)
 ```
@@ -24,6 +25,7 @@ DBURL=postgresql://utente:password@127.0.0.1/edu_test bash test/db_avvia.sh   # 
 | Stripe | `t_stripe_avvia.sh` → `t_stripe.sh` | crea/pausa/riprendi/annulla, idempotency key, chiave service mai sostituita dal token utente, webhook (firma, replay, eventi estranei), setup prezzi |
 | DB | `db_avvia.sh` | ricrea `edu_test` da `migrazioni/replica.sql` (replica dello schema di produzione), applica `migrazione_completa.sql` **due volte** (idempotenza), carica `fixture_test.sql`, poi `t_rls_matrice.sql` (ruoli × tabelle × operazioni: deve stampare zero scostamenti), `t_flusso_tenant.sql` (nuovo tenant end-to-end con RLS attiva), `t_abbonamenti.sql` (ciclo di vita dell'abbonamento via eventi), `t_didattica.sql` (esiti, diario, compiti e permessi della migrazione 32) |
 | Live | `t_live_flussi.sh`, `stress-live.js N stanze secondi` | casi limite del quiz live e carico (500 alunni) |
+| Privacy del live | `t_live_gc.sh` | le stanze con i soprannomi degli alunni vengono davvero cancellate dopo 3 ore (è ciò che l'informativa alle famiglie dichiara), e le partite in corso non vengono toccate |
 
 ## Test che richiedono Apache
 
