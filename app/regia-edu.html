@@ -80,6 +80,12 @@
     .col-side{max-height:38vh;overflow:auto}
     table{display:block;overflow-x:auto;white-space:nowrap}
   }
+  /* tabella degli esiti (migr. 32): compatta ma leggibile, scorre in orizzontale su schermi stretti */
+  .tab{border-collapse:collapse;width:100%;font-size:13px;white-space:normal;display:table}
+  .tab th,.tab td{border-bottom:1px solid var(--linea);padding:8px 12px;text-align:left;vertical-align:top}
+  .tab th{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#8a6a2b;font-weight:700;white-space:nowrap}
+  .tab tbody tr:hover{background:#fdf8f1}
+  .tab td .hint{font-size:11px}
   .col-side{scrollbar-width:thin}
 
   /* media */
@@ -1162,6 +1168,8 @@ function apriEsiti(){
   nascondiTutto(); $('esitiPanel').classList.remove('hidden');
   if(!selectClienti($('esCliente'))){ $('esitiList').innerHTML='<p class="hint">Nessun cliente disponibile.</p>'; return; }
   riempiSelectCorsi($('cpCorso'), '');
+  const primo=CORSI.find(co=>co.proprietario_id===(CLIENTI.find(c=>c.slug===$('esCliente').value)||{}).id)||CORSI[0];
+  if(primo)$('cpCorso').value=primo.id;          /* «nessun corso (legacy)» non ha lezioni: inutile proporlo */
   cpCaricaLezioni();
   caricaEsiti();
 }
