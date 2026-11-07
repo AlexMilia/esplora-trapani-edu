@@ -194,6 +194,28 @@ console.log('— dati storti dalla regia: non deve rompersi niente —');
   ok('e la bussola non blocca il resto della lezione', !w.document.getElementById('frecciaHot').classList.contains('on'));
 }
 
+console.log('— toccare un punto apre la SCOPERTA, non la scheda del docente —');
+{
+  /* c'erano due funzioni con lo stesso nome: la seconda cancellava la prima e
+     il tocco su un punto che brilla apriva gli obiettivi del docente. */
+  const w=dom({w:1280,h:720});
+  w.eval('LEZ={tappe:[],quiz:[]};tappaAttiva={hotspots:[{yaw:0,pitch:0,em:"🧂",tit:"Il munzeddu",'
+        +'txt:"Il cumulo di sale appena raccolto.",foto:"",_fatto:false}]};');
+  w.eval('apriScheda(tappaAttiva.hotspots[0],null)');
+  ok('si apre la scoperta, con il suo titolo', w.document.getElementById('scTit').textContent==='Il munzeddu');
+  ok('…e il suo testo', /cumulo di sale/.test(w.document.getElementById('scTxt').textContent));
+  ok('il pannello della scoperta è quello che si apre',
+     w.document.getElementById('scoperta').classList.contains('on'));
+  ok('NON si apre la scheda riservata al docente',
+     !w.document.getElementById('scheda').classList.contains('on')
+     && w.document.getElementById('schedaBody').textContent.trim()==='');
+  ok('il punto risulta trovato', w.eval('tappaAttiva.hotspots[0]._fatto')===true);
+  ok('la scheda del docente ha un nome suo e resta raggiungibile',
+     typeof w.apriSchedaDocente==='function' && typeof w.apriScheda==='function');
+  ok('il bottone 📋 chiama quella del docente',
+     /onclick="apriSchedaDocente\(\)"/.test(fs.readFileSync('/tmp/pag.html','utf8')));
+}
+
 console.log('— su telefono si aspetta meno che su LIM —');
 {
   const html=fs.readFileSync('/tmp/pag.html','utf8');

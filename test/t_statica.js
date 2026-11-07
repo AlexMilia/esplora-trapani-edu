@@ -44,11 +44,28 @@ function analizza(nome, src) {
   console.log('— ' + nome + ': definite ' + def.size + ' · chiamate NON risolte: ' + lista.length + (lista.length ? '  → ' + lista.map(([f, n]) => f + '×' + n).join(', ') : '  ✓'));
   return lista.length;
 }
+/* Due funzioni con lo STESSO NOME nello stesso file: la seconda cancella la
+   prima senza un errore, e quello che la chiamava si ritrova un'altra
+   funzione. E' successo davvero: la scheda della lezione per il docente si
+   chiamava apriScheda come quella delle scoperte, e toccare un punto che
+   brilla apriva al posto suo gli obiettivi del docente. */
+function doppioni(nome, src) {
+  const puro = pulisci(src), visti = new Map(), doppie = [];
+  for (const g of puro.matchAll(/(?:^|[;}\s])(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)) {
+    const f = g[1];
+    if (visti.has(f)) { if (!doppie.includes(f)) doppie.push(f); } else visti.set(f, 1);
+  }
+  if (doppie.length) console.log('— ' + nome + ': ❌ funzioni dichiarate due volte → ' + doppie.join(', '));
+  else console.log('— ' + nome + ': nessuna funzione dichiarata due volte  ✓');
+  return doppie.length;
+}
+
 let tot = 0;
 for (const f of ['regia-edu.html', 'index.php', 'live-lim.js', 'rispondi.php', 'attiva.php', 'live.php']) {
   let src = fs.readFileSync(__dirname+'/../app/' + f, 'utf8');
   if (f.endsWith('.php') || f.endsWith('.html')) { const parts = [...src.matchAll(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/g)].map(x => x[1]); src = parts.join('\n'); }
   if (f === 'live.php') continue;
   tot += analizza(f, src);
+  tot += doppioni(f, src);
 }
 process.exit(tot ? 1 : 0);

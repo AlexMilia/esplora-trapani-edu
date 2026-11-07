@@ -395,7 +395,7 @@ window.EDU_BASE = <?php echo json_encode(rtrim(dirname($_SERVER['SCRIPT_NAME'] ?
   <button class="tbtn" id="btnAvanti" onclick="saltaVideo(10)" aria-label="Avanti di 10 secondi" title="Avanti di 10 secondi">+10s</button>
   <button class="tbtn" onclick="prossimaTappa()" aria-label="Prossima scoperta">⏭<span class="lbl"> Prossima scoperta</span></button>
   <button class="tbtn" id="btnElenco" onclick="apriElenco()" aria-label="Elenco delle scoperte">📖</button>
-  <button class="tbtn" id="btnScheda" onclick="apriScheda()" aria-label="Scheda della lezione per il docente" title="Scheda della lezione (per il docente)">📋</button>
+  <button class="tbtn" id="btnScheda" onclick="apriSchedaDocente()" aria-label="Scheda della lezione per il docente" title="Scheda della lezione (per il docente)">📋</button>
   <button class="tbtn" id="btnStampa" onclick="apriStampabile()" aria-label="Scheda da stampare per la classe" title="Scheda da stampare per la classe">🖨️</button>
   <button class="tbtn" id="btnDSA" onclick="toggleDSA()" aria-label="Alta leggibilità" title="Alta leggibilità">Aa</button>
   <button class="tbtn" id="btnCC" onclick="toggleCCMenu()" aria-label="Sottotitoli">CC</button>
@@ -1428,7 +1428,7 @@ function updNav(){
 }
 
 /* ---- scheda della lezione: obiettivi e conduzione, per il docente ---- */
-function apriScheda(){
+function apriSchedaDocente(){
   if(!LEZ){ say('Aprite prima una lezione: la scheda è quella della lezione in corso.',true); return; }
   const d=LEZ.didattica||{}, dc=(LEZ.corso&&LEZ.corso.didattica)||{};
   const liv=(LIVELLO==='senior')?'medie':'primaria';
