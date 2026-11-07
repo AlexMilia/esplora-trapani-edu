@@ -1,5 +1,20 @@
 # Registro delle modifiche
 
+## 07/11/2026 — player v2.5: la scena porta l'occhio sul punto che brilla
+
+Segnalazione dal campo: nelle presentazioni da **smartphone** le persone si fermavano. Il video si bloccava sulla tappa, il punto da toccare era fuori dallo schermo, e la scritta «gira a destra» non la leggeva nessuno.
+
+**La causa non era la scritta, erano le soglie.** La bussola diceva «sei girato bene» se il punto stava entro **40° in orizzontale**: un numero giusto per una LIM 16:9, sbagliato per un telefono tenuto in verticale, dove di larghezza se ne vede un terzo. Il punto era fuori dallo schermo e la piattaforma taceva.
+
+- **La soglia ora esce dal campo visivo reale** della camera e dalla forma dello schermo. Misurata: **48°** su LIM 16:9, **13°** su telefono verticale. Lo stesso punto a 35° di lato è dentro su LIM e fuori su telefono, e adesso la piattaforma lo sa.
+- **Freccia grande sul bordo**, dalla parte giusta, che pulsa e si tocca (140×68 px su telefono, ancora più grande oltre i 1400 px perché le LIM si guardano da lontano). Toccandola la scena gira sul punto. La direzione è anche nell'`aria-label`, per chi usa il lettore di schermo.
+- **Se nessuno lo trova, la scena gira da sola**, dolcemente: dopo **3,5 s** su schermo stretto, **7 s** su schermo largo — misurati nel browser, 4,0 s e 7,2 s reali. L'attesa serve a non togliere l'esercizio della ricerca; il giro si ferma se qualcuno sta trascinando, e con «riduci animazioni» è uno scatto secco invece di una panoramica.
+- **La scritta su telefono cresce** (era 13 px, ora 16) e dice che cosa fare — «Tocca la freccia per trovare il punto» — invece di una frase lunga che andava a quattro righe. Su LIM, dove c'è spazio, dice anche da che parte.
+- La freccia sparisce quando la scheda della scoperta è aperta, e non si guarda mai oltre lo zenit.
+
+### Test
+`test/t_bussola.js`, **52 verifiche**: la matematica della soglia sui tre formati, il verso più corto (da 170° a −170° si gira a destra), il giro con e senza animazione, il comportamento della freccia, il dito che ha la precedenza, i dati storti dalla regia che non devono far finire la scena chissà dove. Entrata in `esegui-js.sh`: **16 suite**. Verificato che il test del capovolgimento fallisce davvero se si toglie il limite, e provato nel browser in formato telefono e LIM.
+
 ## 06/11/2026 (notte) — i testi delle schede entrano nelle lezioni (migrazione 33)
 
 Correzione di rotta sul lavoro di stasera: le schede si componevano dai dati della lezione, ma i **testi** dei cinque mestieri stavano ancora in file del codice (`contenuti/*.json`), letti solo dal mock dei test. In produzione quelle lezioni avevano `didattica.scheda` vuoto, quindi le schede sarebbero uscite incomplete, e soprattutto non c'era nulla da modificare in regia.

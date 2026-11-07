@@ -10,6 +10,10 @@
    precedente/successiva, 📋 scheda della lezione per il docente, percorso
    della classe nel menu (lezioni fatte + esito), esito del quiz salvato
    come evidenza valutativa, «Prossima lezione» a fine lezione.
+   v2.5: la bussola porta l'occhio sul punto che brilla — soglia di «fuori
+   dallo schermo» calcolata sul campo visivo vero (un telefono in verticale
+   vede molto meno di una LIM), freccia grande sul bordo che si tocca, e la
+   scena che gira da sola se dopo qualche secondo nessuno l'ha trovato.
    ===================================================================== */
 session_start();
 /* host canonico: Aruba fa 301 non-www -> www e il preflight CORS di
@@ -264,6 +268,32 @@ edu_log('view', isset($_SERVER['QUERY_STRING']) ? $_SERVER['QUERY_STRING'] : '')
   .pill{position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:35;background:rgba(184,80,106,.96);
     color:#fff;border-radius:999px;padding:10px 20px;font-size:15px;font-weight:600;display:none;box-shadow:0 6px 18px rgba(0,0,0,.3)}
   .pill.on{display:block}
+
+  /* FRECCIA: quando il punto che brilla e' fuori dallo schermo compare un
+     bottone grande sul bordo, dalla parte giusta. Toccandolo la scena gira
+     da sola: su telefono nessuno legge la scritta, ma una freccia si tocca. */
+  .frecciaHot{position:fixed;z-index:36;display:none;align-items:center;gap:10px;
+    background:rgba(184,80,106,.97);color:#fff;border:3px solid rgba(255,255,255,.92);
+    border-radius:999px;padding:14px 20px;font-family:inherit;font-size:17px;font-weight:700;
+    line-height:1;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;box-shadow:0 10px 28px rgba(0,0,0,.45);
+    animation:frPuls 1.5s ease-in-out infinite}
+  .frecciaHot.on{display:flex}
+  .frecciaHot .fr-ico{font-size:26px;line-height:1}
+  .frecciaHot[data-lato="dx"]{right:12px;top:50%;transform:translateY(-50%)}
+  .frecciaHot[data-lato="sx"]{left:12px;top:50%;transform:translateY(-50%)}
+  .frecciaHot[data-lato="su"]{top:110px;left:50%;transform:translateX(-50%)}
+  .frecciaHot[data-lato="giu"]{bottom:96px;left:50%;transform:translateX(-50%)}
+  @keyframes frPuls{0%,100%{box-shadow:0 10px 28px rgba(0,0,0,.45)}
+                    50%{box-shadow:0 10px 28px rgba(0,0,0,.45),0 0 0 14px rgba(184,80,106,.22)}}
+  @media(prefers-reduced-motion:reduce){.frecciaHot{animation:none}}
+  body.ipo .frecciaHot{background:#111;border-color:#fff;font-size:22px;padding:18px 24px}
+  body.ipo .frecciaHot .fr-ico{font-size:32px}
+  /* LIM: si guarda da lontano, in fondo all'aula */
+  @media(min-width:1400px){
+    .frecciaHot{font-size:22px;padding:18px 26px;gap:12px}
+    .frecciaHot .fr-ico{font-size:34px}
+  }
   #tarBox{position:fixed;bottom:64px;right:14px;z-index:70;background:rgba(17,21,27,.92);color:#0f0;
     font-family:monospace;font-size:14px;padding:10px 14px;border-radius:10px;display:none}
 
@@ -330,7 +360,12 @@ edu_log('view', isset($_SERVER['QUERY_STRING']) ? $_SERVER['QUERY_STRING'] : '')
     .teachbar .demotag{display:none}
     .tbtn{padding:9px 11px;font-size:15px}
     .tbtn .lbl{display:none}
-    .pill{top:56px;font-size:13px;padding:8px 14px;max-width:90vw;text-align:center}
+    /* su telefono lo schermo e' piccolo: la scritta va letta, quindi cresce */
+    .pill{top:56px;font-size:16px;padding:10px 16px;max-width:92vw;text-align:center;line-height:1.35}
+    .frecciaHot{padding:16px 18px;font-size:18px}
+    .frecciaHot .fr-ico{font-size:30px}
+    .frecciaHot[data-lato="su"]{top:104px}
+    .frecciaHot[data-lato="giu"]{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
     .cocciu{left:10px;bottom:calc(52px + env(safe-area-inset-bottom,0px));gap:8px;max-width:80vw}
     body.cc-on .cocciu{bottom:calc(116px + env(safe-area-inset-bottom,0px))}
     #ccBox{font-size:15px;bottom:calc(56px + env(safe-area-inset-bottom,0px))}
@@ -371,6 +406,8 @@ window.EDU_BASE = <?php echo json_encode(rtrim(dirname($_SERVER['SCRIPT_NAME'] ?
 </div>
 
 <div class="pill" id="pill">👆 Trova e tocca i punti che brillano!</div>
+<button class="frecciaHot" id="frecciaHot" type="button" data-lato="dx"
+        aria-label="Gira la scena verso il punto che brilla"><span class="fr-ico" id="frIco">▶</span><span>di qua!</span></button>
 
 <div class="cocciu" id="cocciu">
   <div class="body"><img class="cimg" src="<?php echo $B('mascotte_img'); ?>" alt="<?php echo $B('mascotte'); ?>" onerror="this.outerHTML='<?php echo $B('mascotte_emoji'); ?>'"></div>
@@ -1136,6 +1173,7 @@ vid.addEventListener('ended',()=>{
 let tappaAttiva=null;
 function apriTappa(t){
   tappaAttiva=t; t._done=true;
+  _tappaDa=Date.now(); _giratoSu=null; fermaGiro();   /* si riparte a cercare */
   vid.pause(); updPausaBtn(); audioDuck(true);
   say(t.cocciu,true);
   if(ACC==='ipo')tts(t.cocciu+'. Ci sono '+t.hotspots.length+(t.hotspots.length===1?' scoperta':' scoperte')+'. Premi N per aprirla.',true);
@@ -1170,28 +1208,130 @@ function apriTappa(t){
   document.getElementById('pill').classList.add('on');
 }
 
-/* ---- bussola: se la scoperta che brilla e' fuori dallo schermo, la pill
-   dice da che parte girare (sui video provvisori e sulle LIM piccole
-   capita spesso che il "?" sia dietro o in basso e sembri "non spuntato") ---- */
+/* ============================================================================
+   BUSSOLA — portare l'occhio sul punto che brilla.
+
+   Il problema vero non era la scritta: erano le soglie. Prima si diceva
+   "sei girato bene" se il punto stava entro 40 gradi, un numero giusto per
+   una LIM 16:9 ma sbagliato per un telefono tenuto in verticale, dove di
+   larghezza se ne vede molta meno: il punto era fuori e nessuno lo diceva.
+   Ora la soglia esce dal campo visivo reale della camera e dalla forma dello
+   schermo. Poi, in ordine: la pill lo scrive, una freccia grande lo mostra
+   dalla parte giusta e si puo' toccare, e se dopo qualche secondo nessuno
+   l'ha trovato la scena ci gira da sola.
+   ========================================================================= */
 const PILL_BASE='👆 Trova e tocca i punti che brillano!';
-function bussola(){
-  const pill=document.getElementById('pill');
-  if(!tappaAttiva||!pill.classList.contains('on')) return;
-  const cam=document.getElementById('cam'); if(!cam) return;
-  const r=cam.getAttribute('rotation');
-  let camYaw=-r.y; camYaw=((camYaw%360)+540)%360-180;
-  const camPitch=r.x;
-  const h=tappaAttiva.hotspots.find(x=>!x._fatto); if(!h){ pill.textContent=PILL_BASE; return; }
+const ATTESA_STRETTO=3500, ATTESA_LARGO=7000;   /* quanto si cerca prima che giri da sola */
+let _tappaDa=0, _giratoSu=null, _giro=null, _ultimoTocco=0;
+
+/* quanto mondo entra davvero in questo schermo, in gradi, con un margine
+   perche' un punto appiccicato al bordo e' come se non ci fosse */
+function sogliaVista(){
+  let fovV=80;
+  try{ const c=document.getElementById('cam').getAttribute('camera'); if(c&&c.fov) fovV=c.fov; }catch(e){}
+  const w=window.innerWidth||1280, h=window.innerHeight||720;
+  const fovH=2*Math.atan(Math.tan(fovV*Math.PI/360)*(w/h))*180/Math.PI;
+  return { oriz:Math.max(12,fovH/2-8), vert:Math.max(10,fovV/2-6) };
+}
+/* da che parte sta il punto rispetto a dove si sta guardando */
+function versoHot(camYaw,camPitch,h,s){
+  s=s||sogliaVista();
   let dy=h.yaw-camYaw; dy=((dy%360)+540)%360-180;
   const dp=h.pitch-camPitch;
-  let hint='';
-  if(dy>40) hint='gira a destra ▶';
-  else if(dy<-40) hint='◀ gira a sinistra';
-  else if(dp>25) hint='▲ guarda in alto';
-  else if(dp<-25) hint='▼ guarda in basso';
-  pill.textContent=hint?('👆 Il punto che brilla è fuori dallo schermo: '+hint):PILL_BASE;
+  let lato='';
+  if(dy>s.oriz) lato='dx'; else if(dy<-s.oriz) lato='sx';
+  else if(dp>s.vert) lato='su'; else if(dp<-s.vert) lato='giu';
+  return { dy:dy, dp:dp, lato:lato, fuori:lato!=='' };
+}
+function camVista(){
+  const cam=document.getElementById('cam'); if(!cam||!cam.getAttribute) return null;
+  const r=cam.getAttribute('rotation');
+  if(!r||typeof r.y!=='number') return null;
+  let y=-r.y; y=((y%360)+540)%360-180;
+  return { yaw:y, pitch:r.x };
+}
+/* scrivere la rotazione: con A-Frame si passa dai comandi dello sguardo,
+   altrimenti (e nei test) si scrive l'attributo */
+function impostaVista(yaw,pitch){
+  const cam=document.getElementById('cam'); if(!cam) return false;
+  const lc=cam.components&&cam.components['look-controls'];
+  if(lc&&lc.yawObject&&lc.pitchObject){
+    lc.yawObject.rotation.y=-yaw*Math.PI/180;
+    lc.pitchObject.rotation.x=Math.max(-Math.PI/2,Math.min(Math.PI/2,pitch*Math.PI/180));
+    return true;
+  }
+  pitch=Math.max(-90,Math.min(90,pitch));   /* oltre lo zenit la scena si capovolge */
+  try{ cam.setAttribute('rotation',{x:pitch,y:-yaw,z:0}); return true; }catch(e){ return false; }
+}
+function fermaGiro(){ if(_giro){ _giro.vivo=false; _giro=null; } }
+/* gira la scena verso il punto, dolcemente: uno scatto secco in un video a
+   360 gradi da' fastidio, e a qualcuno fa venire il mal di mare */
+function giraVerso(h,ms){
+  const a=camVista(); if(!a||!h) return false;
+  fermaGiro();
+  let dy=h.yaw-a.yaw; dy=((dy%360)+540)%360-180;
+  const dp=h.pitch-a.pitch;
+  let meno=false;
+  try{ meno=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches); }catch(e){}
+  const dur=meno?0:(ms===undefined?700:ms);
+  if(dur<=0){ impostaVista(h.yaw,h.pitch); return true; }
+  const ora=()=>(window.performance&&performance.now)?performance.now():Date.now();
+  const t0=ora(), g={vivo:true}; _giro=g;
+  const prossimo=window.requestAnimationFrame?(f=>window.requestAnimationFrame(f)):(f=>setTimeout(f,16));
+  (function passo(){
+    if(!g.vivo) return;
+    const t=Math.min(1,(ora()-t0)/dur);
+    const e=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;       /* morbida in partenza e in arrivo */
+    impostaVista(a.yaw+dy*e, a.pitch+dp*e);
+    if(t<1) prossimo(passo); else if(_giro===g) _giro=null;
+  })();
+  return true;
+}
+const FRECCE={dx:'▶',sx:'◀',su:'▲',giu:'▼'};
+const DOVE ={dx:'gira a destra',sx:'gira a sinistra',su:'guarda in alto',giu:'guarda in basso'};
+function mostraFreccia(lato){
+  const f=document.getElementById('frecciaHot'); if(!f) return;
+  if(!lato){ f.classList.remove('on'); return; }
+  f.dataset.lato=lato;
+  const i=document.getElementById('frIco'); if(i) i.textContent=FRECCE[lato]||'▶';
+  f.setAttribute('aria-label','Gira la scena verso il punto che brilla: '+(DOVE[lato]||''));
+  f.classList.add('on');
+}
+function bussola(){
+  const pill=document.getElementById('pill');
+  if(!tappaAttiva||!pill||!pill.classList.contains('on')){ mostraFreccia(''); return; }
+  const sc=document.getElementById('scoperta');
+  if(sc&&sc.classList.contains('on')){ mostraFreccia(''); return; }   /* scheda aperta: non coprirla */
+  const a=camVista(); if(!a) return;
+  const h=tappaAttiva.hotspots.find(x=>!x._fatto);
+  if(!h){ pill.textContent=PILL_BASE; mostraFreccia(''); return; }
+  const v=versoHot(a.yaw,a.pitch,h);
+  if(!v.fuori){ pill.textContent=PILL_BASE; mostraFreccia(''); return; }
+  /* su schermo stretto la frase lunga andava a quattro righe e copriva mezzo
+     telefono: li' la freccia dice gia' da che parte, alla scritta serve dire
+     che cosa fare */
+  pill.textContent=(window.innerWidth||1280)<820
+    ? '👆 Tocca la freccia per trovare il punto'
+    : '👆 Il punto che brilla è fuori dallo schermo: '+DOVE[v.lato];
+  mostraFreccia(v.lato);
+  /* se nessuno lo trova, dopo un po' ci giriamo noi. Su telefono prima,
+     perche' lo schermo e' piccolo e si cerca peggio. Mai mentre si trascina. */
+  const attesa=(window.innerWidth||1280)<820?ATTESA_STRETTO:ATTESA_LARGO;
+  const t=Date.now();
+  if(_giratoSu!==h && t-_tappaDa>attesa && t-_ultimoTocco>1500){ _giratoSu=h; giraVerso(h,800); }
 }
 setInterval(bussola,400);
+
+/* mentre si trascina non si gira: il dito dell'alunno viene prima */
+['touchstart','mousedown','wheel'].forEach(function(ev){
+  window.addEventListener(ev,function(){ _ultimoTocco=Date.now(); fermaGiro(); },{passive:true});
+});
+function frecciaTocca(){
+  if(!tappaAttiva) return;
+  const h=tappaAttiva.hotspots.find(x=>!x._fatto);
+  if(h){ _giratoSu=h; giraVerso(h,600); }
+}
+(function(){ const f=document.getElementById('frecciaHot'); if(f) f.addEventListener('click',frecciaTocca); })();
 
 AFRAME.registerComponent('look-at-cam',{
   tick:function(){ const c=document.getElementById('cam'); if(c)this.el.object3D.lookAt(c.object3D.position); }
@@ -1241,6 +1381,7 @@ function chiudiScoperta(){
     updPausaBtn();
   }else{
     say('Ce n\'è ancora qualcuno che brilla… trovatelo!');
+    _tappaDa=Date.now(); _giratoSu=null;              /* altro punto, altra ricerca */
   }
 }
 
