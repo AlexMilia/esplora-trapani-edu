@@ -15,6 +15,10 @@
    vede molto meno di una LIM), freccia grande sul bordo che si tocca, e la
    scena che gira da sola se dopo qualche secondo nessuno l'ha trovato.
    ===================================================================== */
+session_set_cookie_params([
+  'httponly' => true, 'samesite' => 'Lax',
+  'secure'   => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+]);
 session_start();
 /* host canonico: Aruba fa 301 non-www -> www e il preflight CORS di
    api.php muore sul redirect (X-EDU-T = richiesta preflighted); inoltre la
@@ -364,7 +368,7 @@ edu_log('view', isset($_SERVER['QUERY_STRING']) ? $_SERVER['QUERY_STRING'] : '')
     .pill{top:56px;font-size:16px;padding:10px 16px;max-width:92vw;text-align:center;line-height:1.35}
     .frecciaHot{padding:16px 18px;font-size:18px}
     .frecciaHot .fr-ico{font-size:30px}
-    .frecciaHot[data-lato="su"]{top:104px}
+    .frecciaHot[data-lato="su"]{top:150px}   /* sotto la pill anche quando va a capo */
     .frecciaHot[data-lato="giu"]{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
     .cocciu{left:10px;bottom:calc(52px + env(safe-area-inset-bottom,0px));gap:8px;max-width:80vw}
     body.cc-on .cocciu{bottom:calc(116px + env(safe-area-inset-bottom,0px))}
@@ -1271,10 +1275,26 @@ function giraVerso(h,ms){
   fermaGiro();
   let dy=h.yaw-a.yaw; dy=((dy%360)+540)%360-180;
   const dp=h.pitch-a.pitch;
+  /* Su telefono A-Frame SOMMA il movimento del giroscopio a yawObject e
+     pitchObject: scrivere li' un valore assoluto porta la camera a
+     (punto - giroscopio), cioe' da un'altra parte, e lascia il pitch
+     "incollato". Percio' ci si muove per DIFFERENZA rispetto a dove gli
+     oggetti stanno adesso: dy e dp vengono da camVista, che il giroscopio
+     lo include gia'. */
+  const cam=document.getElementById('cam');
+  const lc=cam&&cam.components&&cam.components['look-controls'];
+  const conLC=!!(lc&&lc.yawObject&&lc.pitchObject);
+  const y0=conLC?lc.yawObject.rotation.y:0, p0=conLC?lc.pitchObject.rotation.x:0;
+  const vai=(fy,fp)=>{               /* fy, fp = quanto del tragitto e' fatto, in gradi */
+    if(conLC){
+      lc.yawObject.rotation.y=y0-fy*Math.PI/180;
+      lc.pitchObject.rotation.x=Math.max(-Math.PI/2,Math.min(Math.PI/2,p0+fp*Math.PI/180));
+    } else impostaVista(a.yaw+fy, a.pitch+fp);
+  };
   let meno=false;
   try{ meno=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches); }catch(e){}
   const dur=meno?0:(ms===undefined?700:ms);
-  if(dur<=0){ impostaVista(h.yaw,h.pitch); return true; }
+  if(dur<=0){ vai(dy,dp); return true; }
   const ora=()=>(window.performance&&performance.now)?performance.now():Date.now();
   const t0=ora(), g={vivo:true}; _giro=g;
   const prossimo=window.requestAnimationFrame?(f=>window.requestAnimationFrame(f)):(f=>setTimeout(f,16));
@@ -1282,7 +1302,7 @@ function giraVerso(h,ms){
     if(!g.vivo) return;
     const t=Math.min(1,(ora()-t0)/dur);
     const e=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;       /* morbida in partenza e in arrivo */
-    impostaVista(a.yaw+dy*e, a.pitch+dp*e);
+    vai(dy*e, dp*e);
     if(t<1) prossimo(passo); else if(_giro===g) _giro=null;
   })();
   return true;
@@ -1300,8 +1320,10 @@ function mostraFreccia(lato){
 function bussola(){
   const pill=document.getElementById('pill');
   if(!tappaAttiva||!pill||!pill.classList.contains('on')){ mostraFreccia(''); return; }
-  const sc=document.getElementById('scoperta');
-  if(sc&&sc.classList.contains('on')){ mostraFreccia(''); return; }   /* scheda aperta: non coprirla */
+  /* con una scheda aperta sopra (scoperta, elenco lezioni, scheda docente)
+     la freccia non deve coprirla e la scena non deve girare sotto */
+  if(['scoperta','elenco','scheda'].some(id=>{ const el=document.getElementById(id); return el&&el.classList.contains('on'); })){
+    mostraFreccia(''); return; }
   const a=camVista(); if(!a) return;
   const h=tappaAttiva.hotspots.find(x=>!x._fatto);
   if(!h){ pill.textContent=PILL_BASE; mostraFreccia(''); return; }

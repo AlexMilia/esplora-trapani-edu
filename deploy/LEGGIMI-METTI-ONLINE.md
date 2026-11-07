@@ -22,14 +22,18 @@ Tempo: 20 minuti, più i controlli.
 ## 1 · Database (Supabase → SQL Editor)
 
 1. Apri `migrazioni/migrazione_completa.sql`, copia tutto, incolla, **Run**.
-   Contiene le migrazioni 19 → 33 ed è ripetibile: quello che c'è già viene saltato
-   con un avviso «già esiste». Se preferisci andare per passi: 29, 30, 31, 32, 33,
+   Contiene le migrazioni 19 → 34 ed è ripetibile: quello che c'è già viene saltato
+   con un avviso «già esiste». Se preferisci andare per passi: 29, 30, 31, 32, 33, 34,
    una alla volta, nell'ordine.
 2. Leggi i messaggi in fondo. Per la **33** (i testi delle schede dentro le lezioni)
    devi vedere una riga per mestiere: *«scheda riempita»*, *«ha già una scheda,
    lasciata com'è»* oppure *«nessuna lezione in archivio»*. L'ultima non è un errore:
    quella lezione non esiste ancora.
-3. Se compare un **ERROR** la migrazione si è fermata lì e non ha scritto nulla
+3. La **34** è la chiusura di sicurezza: toglie alla chiave pubblica la lettura delle
+   viste e l'esecuzione delle funzioni riservate, e chiude il file con un controllo
+   che **fallisce apposta** se qualcosa è rimasto aperto. Se finisce senza errori,
+   è chiuso.
+4. Se compare un **ERROR** la migrazione si è fermata lì e non ha scritto nulla
    (Supabase annulla tutto il file al primo errore): copia il messaggio e fermati.
 
 ## 2 · File (Aruba → File Manager o FTP)
@@ -39,18 +43,22 @@ Carica il contenuto della cartella `edu/` del pacchetto dentro `/project/edu/`,
 
 | file | perché |
 |---|---|
-| `.htaccess` | percorsi tenant (`/edu/salina-culcasi/`) — uguale a prima, lo ricarichi per sicurezza |
-| `app/api.php` | v6: esiti, diario, compiti |
-| `app/index.php` | player v2.5: bussola, schede, percorso della classe, comandi del video |
-| `app/regia-edu.php` + `.html` | v18: didattica, esiti e compiti, scheda da stampare |
+| `.htaccess` | percorsi tenant (`/edu/salina-culcasi/`) + l'header `Authorization` passato a PHP + errori PHP nascosti |
+| `app/api.php` | v6: esiti, diario, compiti; limite per IP non aggirabile; dettaglio degli eventi filtrato |
+| `app/index.php` | player v2.5: bussola (anche col giroscopio del telefono), schede, percorso della classe |
+| `app/regia-edu.php` | v18: didattica, esiti e compiti, scheda da stampare |
 | `app/compito.php` | **nuovo** — il compito a casa |
 | `app/scheda.php` | **nuovo** — la scheda alunno da stampare |
-| `app/live.php` | pulizia certa delle stanze del quiz |
+| `app/live.php` | pulizia certa delle stanze, limiti sui testi del quiz, immagini solo dai nostri domini |
+| `app/stripe.php` | header di sicurezza |
 | `app/dati/config.example.php` | solo il modello, aggiornato |
 
 **Non caricare** `app/dati/config.php`: nel pacchetto non c'è apposta.
-Se nel File Manager vedi ancora `app/debug500.php` o `app/stripe-setup.php`,
-**cancellali**: sono file di servizio e non devono stare online.
+Nel File Manager **cancella** se ci sono ancora: `app/debug500.php`, `app/stripe-setup.php`
+e `app/regia-edu.html`. I primi due sono file di servizio che non devono stare online;
+il terzo è il doppione statico della regia, senza gli header di sicurezza che
+`regia-edu.php` manda. **La regia si apre da `regia-edu.php`.** Se avevi un segnalibro
+sull'`.html`, cambialo.
 
 Dopo il caricamento, su un terminale con `sha256sum` puoi confrontare le impronte:
 `IMPRONTE.txt` nel pacchetto elenca ogni file con la sua impronta.
@@ -95,6 +103,15 @@ Queste non le può fare il pacchetto:
 - [ ] Verifica che `https://<dominio>/project/edu/app/dati/config.php` risponda
       **403** (la cartella è negata dall'`.htaccess`). Se risponde altro, fermati e
       scrivimi: vuol dire che Apache non legge l'`.htaccess`.
+- [ ] Pannello Aruba → PHP: **display_errors = Off** (l'`.htaccess` lo chiede già,
+      ma su alcune configurazioni Aruba la direttiva va messa dal pannello).
+- [ ] Prova che il database sia chiuso: da un terminale,
+      `curl -s -o /dev/null -w "%{http_code}\n" "https://sdqzqzmkhbkkibjzauox.supabase.co/rest/v1/v_edu_report_cliente?limit=1" -H "apikey: <anon key>"`
+      deve rispondere **401** o **403**, non 200. Prima della migrazione 34 rispondeva 200
+      con tutti i codici classe di tutti i clienti.
+- [ ] Dalla regia, pannello **Abbonamenti**: se risponde 401 anche da admin, Aruba non ha
+      passato l'header `Authorization` a PHP — l'`.htaccess` nuovo contiene la riga che
+      lo fa (`SetEnvIf Authorization`), controlla che sia stato caricato.
 
 ## Che cosa NON è in questo pacchetto
 

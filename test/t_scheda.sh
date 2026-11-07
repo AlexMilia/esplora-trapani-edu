@@ -84,6 +84,18 @@ SPOGLIA=$(curl -s "http://127.0.0.1:8096/scheda.php?c=esplora-trapani&lez=spogli
 ok "lezione senza scheda compilata: avviso in cima e sezioni mancanti non stampate" "$(tutte "$SPOGLIA" "Questa scheda è incompleta" "le fasi del lavoro")"
 ok "…ma quello che c'è già nella lezione viene comunque usato" "$(tutte "$SPOGLIA" "Il munzeddu" "Il palo a T")"
 
+echo "— le bozze non arrivano sul banco —"
+COR=$(curl -s "http://127.0.0.1:8096/scheda.php?c=esplora-trapani&lez=corallaio&tipo=standard&liv=junior")
+ok "i promemoria «[DA VERIFICARE SUI VIDEO]» del corallaio non vengono stampati" "$(nessuna "$COR" "DA VERIFICARE")"
+ok "…ma il resto della scheda del corallaio c'è" "$(tutte "$COR" "Il corallaio" "Le fasi del lavoro")"
+ok "con 2 fasi soltanto, l'esercizio non esce già in ordine" "$(php -r '
+  $f=file_get_contents("'"$APP"'/scheda.php"); preg_match("/function mescola_stabile.*?\n}\n/s",$f,$m); eval(substr($m[0],0)); 
+  $ok=1; foreach(["a","b","c","d","e","f","g","h"] as $seme){ $o=mescola_stabile(["prima","dopo"],$seme); if($o===["prima","dopo"]) $ok=0; } echo $ok;')"
+ok "«L’oggetto» diventa «l’oggetto» dentro la frase del disegno" "$(php -r '
+  $t="L’oggetto finito"; if(preg_match("/^((Il|Lo|La|I|Gli|Le|Un|Uno|Una) |L[\x27’])/u",$t)) $t=mb_strtolower(mb_substr($t,0,1)).mb_substr($t,1); echo $t==="l’oggetto finito"?1:0;')"
+ok "parametro storto (?lez[]=1) → pagina di cortesia, non errore 500" "$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8096/scheda.php?c=esplora-trapani&lez[]=1" | grep -q "^404$" && echo 1)"
+ok "cliente storto (?c[]=1) → si ripiega sul tenant di default, non errore 500" "$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8096/scheda.php?c[]=1&lez=salinaio" | grep -q "^200$" && echo 1)"
+
 echo "— sicurezza —"
 ok "nessuna chiave di Supabase finisce nella pagina" "$(nessuna "$STD$ADA" "anon-finta" "SUPA_" "service_role")"
 ok "la pagina dice ai motori di non indicizzarla" "$(ha "$STD" "noindex")"

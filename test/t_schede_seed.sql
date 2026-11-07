@@ -80,6 +80,34 @@ select _ok('lezione «Il corallo» trovata per titolo anche con slug sconosciuto
   (select coalesce(didattica->'scheda','{}'::jsonb) <> '{}'::jsonb from edu_lezioni where slug='lez-zz1' and owner is null));
 update edu_lezioni set slug='corallo' where slug='lez-zz1' and owner is null;
 
+\echo '=== 5b. un corso duplicato per un altro cliente: TUTTE le originali ricevono la scheda ==='
+insert into edu_lezioni(corso_id, progetto, slug, titolo, stato, ordine, token)
+select (select id from edu_corsi where slug='antichi-mestieri' limit 1),
+       'antichi-mestieri-trapani', 'vendemmia', 'La vendemmia', 'bozza', 61, 'tok-vend-copia'
+where not exists (select 1 from edu_lezioni where token='tok-vend-copia');
+\ir ../migrazioni/migrazione_33_schede_contenuti.sql
+select _ok('con due lezioni originali «vendemmia», entrambe hanno la scheda (non solo la prima)',
+  (select count(*) from edu_lezioni where slug='vendemmia' and owner is null
+     and coalesce(didattica->'scheda','{}'::jsonb) <> '{}'::jsonb) = 2);
+delete from edu_lezioni where token='tok-vend-copia';
+
+\echo '=== 5c. un titolo solo simile NON riceve la scheda del salinaio ==='
+insert into edu_lezioni(progetto, slug, titolo, stato, ordine, token)
+select 'sale-in-classe', 'la-salina-fenicotteri', 'La salina e i fenicotteri', 'pubblicata', 90, 'tok-fenic'
+where not exists (select 1 from edu_lezioni where token='tok-fenic');
+\ir ../migrazioni/migrazione_33_schede_contenuti.sql
+select _ok('«La salina e i fenicotteri» resta senza scheda: si aggancia solo per titolo esatto',
+  (select coalesce(didattica->'scheda','{}'::jsonb) = '{}'::jsonb from edu_lezioni where token='tok-fenic'));
+delete from edu_lezioni where token='tok-fenic';
+
+\echo '=== 5d. il controllo finale non fa fallire il file se una scheda è scritta male ==='
+update edu_lezioni set didattica = jsonb_set(coalesce(didattica,'{}'::jsonb), '{scheda}', '{"fasi":"non un array"}'::jsonb)
+ where slug='corallo' and owner is null;
+\ir ../migrazioni/migrazione_33_schede_contenuti.sql
+select _ok('con «fasi» non array il blocco di controllo avvisa e basta, senza errore',
+  (select didattica->'scheda'->>'fasi' from edu_lezioni where slug='corallo' and owner is null) = 'non un array');
+update edu_lezioni set didattica = coalesce(didattica,'{}'::jsonb) - 'scheda' where slug='corallo' and owner is null;
+
 \echo '=== 6. le copie dei docenti non vengono toccate ==='
 select _ok('una copia con owner non riceve la scheda dal seed',
   not exists (select 1 from edu_lezioni where owner is not null

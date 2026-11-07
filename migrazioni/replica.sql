@@ -14,6 +14,12 @@ alter default privileges in schema public grant execute on functions to service_
 -- tester fa le veci dell'admin: nei test crea gli account come farebbe Supabase Auth
 grant select, insert, update, delete on auth.users to tester;
 grant authenticated to tester; grant usage on schema public, auth to authenticated, anon;
+-- Come su Supabase: tutto ciò che nasce in public viene concesso ad anon e authenticated
+-- (la RLS poi protegge le TABELLE; viste e funzioni no). Senza queste righe i test
+-- non vedrebbero i buchi che la migrazione 34 chiude.
+alter default privileges in schema public grant all on tables to anon, authenticated;
+alter default privileges in schema public grant all on sequences to anon, authenticated;
+alter default privileges in schema public grant execute on functions to anon, authenticated;
 create table edu_classi(codice text primary key, istituto text, comune text, livello text, anno_scolastico text, progetto text, note text, creato_il timestamp with time zone default now());
 create table edu_eventi(id bigserial primary key, codice_classe text, progetto text, lezione text, tipo text, dettaglio jsonb default '{}'::jsonb, ts timestamp with time zone default now());
 create table edu_hotspot(id uuid primary key default gen_random_uuid(), tappa_id uuid, yaw numeric, pitch numeric, em text, tit text, txt text, txt2 text, foto_url text, audio_url text, validazione text, validatore text, validato_il timestamp with time zone, ordine integer);

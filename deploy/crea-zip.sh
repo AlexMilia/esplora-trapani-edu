@@ -19,6 +19,8 @@
 #                                     sovrascritto: contiene le chiavi segrete
 #   app/debug500.php                  pagina di diagnosi: espone i dettagli degli errori
 #   app/stripe-setup.php              crea i prezzi su Stripe: si usa una volta e si cancella
+#   app/regia-edu.html                doppione statico della regia, senza gli header di
+#                                     sicurezza che regia-edu.php manda: online non serve
 #   test/, docs/, demo-vr/, contenuti/, .git  non servono al server
 # =============================================================================
 set -euo pipefail
@@ -35,6 +37,7 @@ mkdir -p "$D/edu/app" "$D/migrazioni" dist
 # ---- il sito --------------------------------------------------------------
 cp -r app/. "$D/edu/app/"
 rm -f  "$D/edu/app/debug500.php" "$D/edu/app/stripe-setup.php"
+rm -f  "$D/edu/app/regia-edu.html"   # online c'e' solo regia-edu.php (stessi contenuti, piu' gli header di sicurezza)
 rm -f  "$D/edu/app/dati/config.php" "$D/edu/app/dati/log.txt"
 rm -rf "$D/edu/app/dati/cache" 2>/dev/null || true
 find "$D/edu/app/dati/live" -type f ! -name .htaccess -delete
@@ -44,7 +47,7 @@ cp deploy/htaccess-project-edu.txt "$D/edu/.htaccess"
 cp migrazioni/migrazione_completa.sql "$D/migrazioni/"
 cp migrazioni/migrazione_29_rls_consolidata.sql migrazioni/migrazione_30_abbonamenti.sql \
    migrazioni/migrazione_31_elenco_clienti.sql migrazioni/migrazione_32_didattica.sql \
-   migrazioni/migrazione_33_schede_contenuti.sql "$D/migrazioni/"
+   migrazioni/migrazione_33_schede_contenuti.sql migrazioni/migrazione_34_chiusura_sicurezza.sql "$D/migrazioni/"
 
 # ---- i passi -----------------------------------------------------------------
 cp deploy/LEGGIMI-METTI-ONLINE.md "$D/"
@@ -54,6 +57,7 @@ err=0
 [ -f "$D/edu/app/dati/config.php" ]  && { echo "❌ config.php reale nel pacchetto"; err=1; }
 [ -f "$D/edu/app/debug500.php" ]     && { echo "❌ debug500.php nel pacchetto";  err=1; }
 [ -f "$D/edu/app/stripe-setup.php" ] && { echo "❌ stripe-setup.php nel pacchetto"; err=1; }
+[ -f "$D/edu/app/regia-edu.html" ]   && { echo "❌ regia-edu.html nel pacchetto";   err=1; }
 if grep -rIlE "(sk_live_|sk_test_|whsec_)[A-Za-z0-9]{8,}" "$D" >/dev/null 2>&1; then
   echo "❌ una chiave Stripe è finita nel pacchetto"; err=1; fi
 if grep -rIl '"role":"service_role"\|service_role' "$D/edu" | grep -v config.example.php >/dev/null 2>&1; then

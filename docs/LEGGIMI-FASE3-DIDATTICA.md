@@ -12,10 +12,12 @@ Tempo: circa 30 minuti. Si può fare in un colpo solo insieme alle migrazioni 29
 
 SQL Editor → incolla **tutto** `migrazioni/migrazione_completa.sql` → Run.
 
-Il file contiene le migrazioni 19 → 33 ed è **idempotente**: le parti già applicate il 23/09 vengono
+Il file contiene le migrazioni 19 → 34 ed è **idempotente**: le parti già applicate il 23/09 vengono
 semplicemente salutate con un «già esiste, salto». Se preferisci andare per passi, esegui nell'ordine
 `migrazione_29_rls_consolidata.sql`, `migrazione_30_abbonamenti.sql`, `migrazione_31_elenco_clienti.sql`,
-`migrazione_32_didattica.sql`, `migrazione_33_schede_contenuti.sql`.
+`migrazione_32_didattica.sql`, `migrazione_33_schede_contenuti.sql`, `migrazione_34_chiusura_sicurezza.sql`.
+
+La **34** è la chiusura di sicurezza (viste e funzioni riservate non più raggiungibili con la chiave pubblica) e finisce con un controllo che fallisce apposta se qualcosa è rimasto aperto. **Per la messa online usa `deploy/LEGGIMI-METTI-ONLINE.md`**, che è la procedura aggiornata e completa.
 
 La **33** è quella che mette i testi delle schede dentro le lezioni. Nei messaggi di Supabase, sotto il
 risultato, leggi una riga per mestiere: *«scheda riempita»*, *«ha già una scheda, lasciata com'è»* oppure

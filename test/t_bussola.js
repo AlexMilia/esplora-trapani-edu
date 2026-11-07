@@ -90,6 +90,44 @@ console.log('— la scena gira verso il punto —');
   ok('senza un punto non gira nulla', w.giraVerso(null,0)===false);
 }
 
+console.log('— telefono con giroscopio: A-Frame somma il movimento del telefono —');
+{
+  /* Riproduce la formula di look-controls 1.5.0: la rotazione della camera e'
+     giroscopio + yawObject/pitchObject. Scrivere un valore assoluto negli
+     oggetti portava la camera a (punto - giroscopio): sbagliata di tanto quanto
+     il telefono era girato. */
+  const w=dom({w:390,h:844,menoMovimento:true});
+  const R=Math.PI/180, magic={x:-20*R, y:35*R};
+  const lc={ yawObject:{rotation:{y:0}}, pitchObject:{rotation:{x:0}} };
+  const cam=w.document.getElementById('cam');
+  cam.components={'look-controls':lc};
+  cam.getAttribute=(n)=> n==='rotation'
+     ? {x:(magic.x+lc.pitchObject.rotation.x)/R, y:(magic.y+lc.yawObject.rotation.y)/R, z:0}
+     : (n==='camera'?{fov:80}:null);
+  ok('di partenza la camera guarda dove dice il giroscopio', vicino(w.camVista().yaw,-35) && vicino(w.camVista().pitch,-20));
+  w.giraVerso({yaw:120,pitch:10},0);
+  ok('dopo il giro la camera guarda ESATTAMENTE il punto, giroscopio compreso',
+     vicino(w.camVista().yaw,120) && vicino(w.camVista().pitch,10));
+  ok('…e il punto risulta dentro lo schermo', w.versoHot(w.camVista().yaw,w.camVista().pitch,{yaw:120,pitch:10}).fuori===false);
+  const p1=lc.pitchObject.rotation.x;
+  w.giraVerso({yaw:120,pitch:-20},0);
+  ok('il pitch si muove per differenza, non resta incollato a un valore assoluto',
+     vicino(w.camVista().pitch,-20) && lc.pitchObject.rotation.x!==p1);
+}
+
+console.log('— con una scheda aperta sopra, la scena non gira sotto —');
+{
+  for (const id of ['elenco','scheda']) {
+    const w=dom({w:390,h:844,menoMovimento:true});
+    w.eval('tappaAttiva={hotspots:[{yaw:150,pitch:0,_fatto:false}]};'
+          +'document.getElementById("pill").classList.add("on");'
+          +'document.getElementById("'+id+'").classList.add("on");_tappaDa=Date.now()-60000;_ultimoTocco=0;');
+    w.bussola();
+    ok('con «'+id+'» aperto la freccia resta nascosta', !w.document.getElementById('frecciaHot').classList.contains('on'));
+    ok('…e la scena non si muove', w.camVista().yaw===0);
+  }
+}
+
 console.log('— chi ha chiesto meno movimento non viene sballottato —');
 {
   const w=dom({w:390,h:844,menoMovimento:true});

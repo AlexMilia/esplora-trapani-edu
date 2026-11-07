@@ -1,4 +1,5 @@
 <?php
+header('X-Content-Type-Options: nosniff');
 /* =====================================================================
    ESPLORA TRAPANI EDU · scheda.php — la scheda da stampare per la classe
    ---------------------------------------------------------------------
@@ -20,6 +21,10 @@
    Si stampa dal browser (Ctrl+P → A4). Nessuna libreria, nessun PDF da
    generare sul server: su Aruba non servirebbe altro che grattacapi.
    ===================================================================== */
+session_set_cookie_params([
+  'httponly' => true, 'samesite' => 'Lax',
+  'secure'   => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+]);
 session_start();
 define('EDU_OK', 1);
 require __DIR__ . '/dati/config.php';
@@ -27,10 +32,12 @@ require __DIR__ . '/dati/config.php';
 if (!isset($_SESSION['edu_t'])) { $_SESSION['edu_t'] = bin2hex(random_bytes(24)); }
 
 /* ---------- ingresso ---------- */
-$C    = isset($_GET['c'])   ? preg_replace('/[^a-z0-9\-]/', '', strtolower($_GET['c'])) : '';
-$LEZ  = isset($_GET['lez']) ? preg_replace('/[^a-z0-9\-_]/', '', strtolower($_GET['lez'])) : '';
-$TIPO = (isset($_GET['tipo']) && $_GET['tipo'] === 'adattata') ? 'adattata' : 'standard';
-$LIV  = (isset($_GET['liv']) && $_GET['liv'] === 'senior') ? 'senior' : 'junior';
+/* ogni parametro e' una stringa, o niente: con ?c[]=1 si finiva in errore 500 */
+$g = function ($k) { return (isset($_GET[$k]) && is_string($_GET[$k])) ? $_GET[$k] : ''; };
+$C    = preg_replace('/[^a-z0-9\-]/', '', strtolower($g('c')));
+$LEZ  = preg_replace('/[^a-z0-9\-_]/', '', strtolower($g('lez')));
+$TIPO = ($g('tipo') === 'adattata') ? 'adattata' : 'standard';
+$LIV  = ($g('liv') === 'senior') ? 'senior' : 'junior';
 if ($C === '' && isset($EDU_TENANT_DEFAULT)) $C = $EDU_TENANT_DEFAULT;
 
 function fine($msg) {
@@ -106,32 +113,36 @@ if ($numero === 0 || $diQuante === 0) {
   }
 }
 $apertura = $valore('prima', isset($did['prima']) ? $did['prima'] : '');
-$trova    = (array)$valore('trova', array_slice($titoliHot, 0, 6));
-$distr    = (array)$valore('distrattori', []);
-$fasi     = (array)$valore('fasi', []);
-$glossar  = (array)$valore('glossario', isset($did['parole_chiave']) ? $did['parole_chiave'] : []);
+$trova    = senza_bozze((array)$valore('trova', array_slice($titoliHot, 0, 6)));
+$distr    = senza_bozze((array)$valore('distrattori', []));
+$fasi     = senza_bozze((array)$valore('fasi', []));
+$glossar  = senza_bozze((array)$valore('glossario', isset($did['parole_chiave']) ? $did['parole_chiave'] : []));
 $territ   = $valore('territorio', '');
 $capacita = (array)$valore('capacita', ['Forza fisica', 'Pazienza', 'Precisione',
                                         'Conoscere il meteo', 'Lavoro di squadra', 'Creatività']);
-$intervis = (array)$valore('intervista', []);
+$intervis = senza_bozze((array)$valore('intervista', []));
 /* «Disegna …»: se in regia non si è scritto che cosa, si disegna il primo
    punto che brilla nel video. La frase va in mezzo a un'altra, quindi
    l'articolo iniziale va in minuscolo: «Disegna il munzeddu», non «Il». */
 $primoPunto = isset($titoliHot[0]) ? $titoliHot[0] : '';
-if ($primoPunto !== '' && preg_match('/^(Il|Lo|La|I|Gli|Le|L\'|L’|Un|Uno|Una) /u', $primoPunto))
+if ($primoPunto !== '' && preg_match('/^((Il|Lo|La|I|Gli|Le|Un|Uno|Una) |L[\'’])/u', $primoPunto))
   $primoPunto = mb_strtolower(mb_substr($primoPunto, 0, 1)) . mb_substr($primoPunto, 1);
 $disegno  = $valore('disegno', $primoPunto);
-$veroFals = (array)$valore('vero_falso', []);
+$veroFals = senza_bozze((array)$valore('vero_falso', []));
 $autoval  = (array)$valore('autovalutazione', [
   'So spiegare le fasi di questo mestiere',
   'Conosco almeno tre parole del mestiere',
   'Ho lavorato bene con la mia squadra']);
 $A        = isset($S['adattata']) && is_array($S['adattata']) ? $S['adattata'] : [];
+foreach ($A as $kA => $vA) { if (is_array($vA)) $A[$kA] = senza_bozze($vA); }
+foreach (['territorio' => 'territ', 'disegno' => 'disegno'] as $kS => $vS) {   /* testi singoli ancora in bozza: come se fossero vuoti */
+  if (stripos((string)$$vS, '[DA VERIFICARE') !== false) $$vS = ($kS === 'disegno') ? $primoPunto : '';
+}
 
 $titoloLez  = isset($L['tit']) ? $L['tit'] : 'Lezione';
 $titoloCor  = isset($L['corso']['tit']) ? $L['corso']['tit'] : '';
 $brandTit   = isset($CLI['brand']['titolo']) ? $CLI['brand']['titolo'] : (isset($CLI['nome']) ? $CLI['nome'] : '');
-$istituto   = isset($_GET['scuola']) ? substr(preg_replace('/[^\p{L}\p{N} «»\'\.\-]/u', '', $_GET['scuola']), 0, 70) : '';
+$istituto   = substr((string)preg_replace('/[^\p{L}\p{N} «»\'\.\-]/u', '', $g('scuola')), 0, 70);  /* (string): con UTF-8 rotto preg_replace da' null */
 $annoScol   = (int)date('n') >= 9 ? date('Y') . '/' . (date('Y') + 1) : (date('Y') - 1) . '/' . date('Y');
 
 function e($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
@@ -173,10 +184,21 @@ function riquadroFoto($url, $etichetta, $h = 150) {
 /* mescola in modo stabile: la stessa scheda esce sempre uguale (ristampe identiche) */
 function mescola_stabile(array $a, $seme) {
   $n = count($a); if ($n < 2) return $a;
-  $s = crc32($seme);
+  $orig = $a; $s = crc32($seme);
   for ($i = $n - 1; $i > 0; $i--) { $s = ($s * 1103515245 + 12345) & 0x7fffffff; $j = $s % ($i + 1);
     $t = $a[$i]; $a[$i] = $a[$j]; $a[$j] = $t; }
+  /* con 2 o 3 voci capita di ricadere nell'ordine giusto: l'esercizio uscirebbe
+     gia' risolto. In quel caso si ruota di un posto (resta deterministico). */
+  if ($a === $orig) { array_push($a, array_shift($a)); }
   return $a;
+}
+/* le voci ancora marcate [DA VERIFICARE …] sono promemoria di chi scrive:
+   la regia le mostra, la stampa per gli alunni no */
+function senza_bozze(array $a) {
+  return array_values(array_filter($a, function ($v) {
+    $t = is_array($v) ? json_encode($v, JSON_UNESCAPED_UNICODE) : (string)$v;
+    return stripos($t, '[DA VERIFICARE') === false;
+  }));
 }
 $mancanti = [];
 if (!$apertura) $mancanti[] = 'la domanda di apertura';

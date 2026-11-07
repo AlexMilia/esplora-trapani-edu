@@ -1,4 +1,5 @@
 <?php
+header('X-Content-Type-Options: nosniff');
 /* =====================================================================
    ESPLORA TRAPANI EDU · compito.php — il compito a casa (migr. 32)
    Si apre dal link che il docente dà alla classe:
@@ -11,6 +12,10 @@
    fa il database (edu_compito_valuta), come per il quiz live.
    Sessione e token come index.php: api.php rifiuta chi non passa da qui.
    ===================================================================== */
+session_set_cookie_params([
+  'httponly' => true, 'samesite' => 'Lax',
+  'secure'   => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+]);
 session_start();
 define('EDU_OK', 1);
 require __DIR__ . '/dati/config.php';

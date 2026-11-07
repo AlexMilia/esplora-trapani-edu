@@ -21,6 +21,7 @@ declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 header('Referrer-Policy: strict-origin-when-cross-origin');
+header('X-Content-Type-Options: nosniff');
 
 $LIVE_DIR      = __DIR__ . '/dati/live';
 $TTL_STANZA    = 3 * 3600;   // vita massima di una stanza (s)
@@ -32,9 +33,9 @@ $MAX_NOME      = 14;         // caratteri soprannome
 
 /* limite per IP: senza, si possono creare stanze a raffica o provare PIN */
 function live_ip(){
+  /* solo l'indirizzo della connessione: X-Forwarded-For lo scrive chi chiama
+     (Aruba non lo riscrive), e fidarsene azzerava ogni limite */
   $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-  foreach (['HTTP_CF_CONNECTING_IP','HTTP_X_FORWARDED_FOR'] as $h)
-    if (!empty($_SERVER[$h])) { $p = explode(',', $_SERVER[$h]); $ip = trim($p[0]); break; }
   return preg_replace('/[^0-9a-fA-F\.:]/', '', substr($ip, 0, 45));
 }
 function live_throttle(string $azione, int $max, int $finestra): bool {
@@ -200,12 +201,17 @@ case 'crea': {
     $g   = $q['g'] ?? null;
     if ($dom === '' || !is_array($opz) || count($opz) < 2 || count($opz) > 6)
       fail('Domanda malformata');
-    $opz = array_values(array_map(fn($o) => trim((string)$o), $opz));
+    $opz = array_values(array_map(fn($o) => taglia(trim((string)$o), 120), $opz));
+    $dom = taglia($dom, 300);     /* testi con un tetto: una stanza non deve pesare megabyte */
     if (!is_int($g) || $g < 0 || $g >= count($opz)) fail('Indice risposta non valido');
     // "Lo sapevi?": spiegazione + media opzionali, svelati SOLO ai risultati
     $sp  = taglia(trim((string)($q['spiegazione'] ?? '')), 500);
     $med = trim((string)($q['media'] ?? ''));
-    if ($med !== '' && (!preg_match('#^https://#i', $med) || strlen($med) > 500)) $med = '';
+    /* l'immagine finisce sui telefoni degli alunni: solo dai nostri domini */
+    $medHost = strtolower((string)parse_url($med, PHP_URL_HOST));
+    $medOk = $med !== '' && strlen($med) <= 500 && preg_match('#^https://#i', $med)
+             && preg_match('/(^|\.)(b-cdn\.net|alessandromilia\.it|esploratrapani\.it|supabase\.co)$/', $medHost);
+    if (!$medOk) $med = '';
     $Q[] = ['domanda' => $dom, 'opzioni' => $opz, 'g' => $g,
              'sp' => $sp, 'med' => $med];
   }

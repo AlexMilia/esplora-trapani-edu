@@ -1,5 +1,43 @@
 # Registro delle modifiche
 
+## 07/11/2026 (pomeriggio) — chiusura: due revisioni indipendenti, migrazione 34, pacchetto per Aruba
+
+Prima di chiudere, il lavoro degli ultimi due giorni è stato riletto da due revisori che non lo avevano scritto: uno sulla logica delle modifiche, uno solo sulla sicurezza di tutta la cartella `app/` e delle migrazioni. Ogni segnalazione è stata verificata nel codice prima di essere accettata. Qui sotto quello che era vero e come è stato chiuso.
+
+### Sicurezza del database — `migrazioni/migrazione_34_chiusura_sicurezza.sql`
+- **Le viste erano leggibili con la chiave pubblica.** PostgreSQL e Supabase concedono tutto su ciò che nasce in `public`; la migrazione 29 revocava solo sulle tabelle. `v_edu_report_cliente` esponeva ad `anon` tutti i codici classe di tutti i clienti, saltando la RLS. Ora nessuna vista è leggibile direttamente e tutte girano con i privilegi di chi chiama (`security_invoker`).
+- **Le funzioni riservate erano eseguibili con la chiave pubblica**, per lo stesso default: `edu_assembla_lezione` (bozze e quiz con le soluzioni, conoscendo l'uuid), `edu_stats_cliente`, `edu_report_mio_cliente`, `edu_duplica_corso`… Il player stesso usava quattro RPC senza nessun grant esplicito. Ora: revoca da `public` e `anon` su tutte le `edu_*`, poi un **elenco esplicito** delle tredici funzioni che il player e le pagine pubbliche chiamano davvero.
+- **Un evento storto rompeva le statistiche di un cliente intero.** `edu_stats_cliente` faceva `::boolean` e `::numeric` sul dettaglio degli eventi, che anon scrive. Ora i cast sono tolleranti (`edu_num`, `edu_bool`), `api.php` lascia passare solo chiavi note del tipo giusto, e la policy limita la taglia del dettaglio.
+- **Le richieste di attivazione** arrivavano dal browser senza limiti: la policy ora impone `stato='nuova'`, nessun `cliente_id` e lunghezze massime.
+- La migrazione finisce con un controllo che **fallisce apposta** se qualcosa è rimasto aperto. `migrazioni/replica.sql` riproduce ora i privilegi di default di Supabase, così i test vedono questi buchi: **senza la 34, `t_sicurezza.sql` ha 10 verifiche rosse**; con la 34, 20 verdi.
+
+### Sicurezza del PHP
+- **I limiti per IP si aggiravano con un header.** `api.php` e `live.php` si fidavano di `X-Forwarded-For`; Aruba non lo riscrive, quindi lo sceglieva chi chiamava, con un contatore nuovo a ogni richiesta. Ora conta solo l'indirizzo della connessione.
+- La diagnostica di `api.php` passa dal limite per IP (10 tentativi ogni 5 minuti) e con `?k[]=x` risponde 403 invece di un errore 500. Il referer si confronta per host, non per sottostringa.
+- `live.php`: tetto ai testi di domande e opzioni, immagini del «Lo sapevi?» solo dai domini della piattaforma.
+- Cookie di sessione `HttpOnly`, `SameSite=Lax`, `Secure` su https; `nosniff` anche su `scheda.php`, `compito.php`, `stripe.php`.
+- L'`.htaccess` di `/project/edu/` passa l'header `Authorization` a PHP (senza, la regia Abbonamenti risponde sempre 401 su Aruba) e nasconde gli errori PHP.
+
+### Player v2.5 — correzione del giroscopio
+Su telefono A-Frame **somma** il movimento del giroscopio alla rotazione che il codice scrive: la rotazione automatica verso il punto atterrava a (punto − giroscopio), e lasciava l'orizzonte inclinato per tutta la lezione. Ora il giro si fa per differenza rispetto a dove gli oggetti stanno. Verificato con un test che riproduce la formula di `look-controls` 1.5.0: con il codice vecchio fallisce. In più: con l'elenco lezioni o la scheda docente aperti la scena non gira sotto, e su telefono stretto la freccia «in alto» non copre più la scritta.
+
+### Schede da stampare
+- I promemoria `[DA VERIFICARE SUI VIDEO]` dei quattro mestieri in bozza **non arrivano più sul banco**: la regia li mostra, la stampa li salta. La migrazione 33 li conta in un avviso.
+- Con due o tre fasi la mescolata poteva ricadere nell'ordine giusto (esercizio già risolto): ora ruota di un posto. L'articolo «L'…» viene abbassato come gli altri. Un parametro scritto male nell'indirizzo dà la pagina di cortesia, non un errore 500.
+- Migrazione 33: riempie **tutte** le lezioni originali che corrispondono (anche la copia di un corso duplicato per un secondo cliente), trova la lezione per slug o per **titolo esatto** (non per somiglianza: «La salina e i fenicotteri» non riceve la scheda del salinaio), e guarda solo i progetti di Antichi Mestieri / Sale in Classe. Il controllo finale non fa fallire il file se una scheda è scritta male.
+- Regia: salvando una lezione non si perdono più i campi della scheda che il form non conosce, e la riga «mancano ancora…» si aggiorna subito.
+
+### Pacchetto per Aruba — `deploy/crea-zip.sh`
+Costruisce lo zip con la stessa struttura del server e, prima di chiuderlo, verifica che non contenga `config.php`, `debug500.php`, `stripe-setup.php`, `regia-edu.html`, chiavi Stripe o la parola `service_role` fuori dal modello; ogni PHP passa `php -l`; `IMPRONTE.txt` serve a confrontare dopo il caricamento. `deploy/LEGGIMI-METTI-ONLINE.md` ha i passi in ordine e i controlli.
+
+### Test
+`t_sicurezza.sql` (20), `t_schede_seed.sql` 16 → 19, `t_bussola.js` 59 → 67, `t_scheda.sh` 43 → 49, `t_didattica_api.sh` 30 → 37. Giro completo: 16 suite jsdom, 11 passi di database con 125 verifiche SQL e le migrazioni applicate due volte, API 37, schede 49, Stripe 28, privacy del live.
+
+### Segnalazioni valutate e NON accolte, con il perché
+- *Limitare le adesioni al quiz live per IP*: in una scuola tutta la classe esce con lo stesso IP; avrebbe bloccato la classe, non chi disturba.
+- *Non mostrare la risposta giusta nel compito a casa*: è una scelta didattica voluta (il compito è esercizio, non verifica certificata), e senza identificare l'alunno — che per scelta non esiste nel sistema — non si può impedire una seconda consegna.
+- *Rendere indistinguibile «stanza inesistente» da «stanza in attesa»*: il PIN a sei cifre dura il tempo di una partita; vale il compromesso che fanno gli strumenti analoghi.
+
 ## 07/11/2026 — player v2.5: la scena porta l'occhio sul punto che brilla
 
 Segnalazione dal campo: nelle presentazioni da **smartphone** le persone si fermavano. Il video si bloccava sulla tappa, il punto da toccare era fuori dallo schermo, e la scritta «gira a destra» non la leggeva nessuno.

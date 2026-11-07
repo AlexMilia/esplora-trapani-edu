@@ -956,11 +956,14 @@ async function salvaMeta(){
     video_coccio:$('fCoccio').value.trim()||null,
     corso_id:($('fCorso').value||null), progetto:progettoDelCorso($('fCorso').value)||LEZ.progetto,
     accessibilita:{ipovedenti:$('fAccIpo').checked,lis:$('fAccLis').checked,note:$('fAccNote').value.trim()},
-    didattica:Object.assign(didatticaLezPayload(),{scheda:schedaPayload()}),
+    /* la scheda: i campi del form vincono, ma quello che il form non conosce
+       (es. «autovalutazione» caricata dalla migrazione) non va perso */
+    didattica:Object.assign(didatticaLezPayload(),{scheda:Object.assign({},((LEZ.didattica||{}).scheda)||{},schedaPayload())}),
     aggiornato_il:new Date().toISOString()};
   const {error}=await sb.from('edu_lezioni').update(upd).eq('id',LEZ.id);
   if(error){ toast('Errore: '+error.message); return; }
   Object.assign(LEZ,upd); toast('Lezione salvata'); caricaLezioni();
+  if(typeof schedaStato==='function') schedaStato();   /* la riga «mancano ancora…» si aggiorna subito */
 }
 async function eliminaLezione(){
   if(!confirm('Eliminare DEFINITIVAMENTE questa lezione con tutte le tappe, scoperte e quiz?'))return;

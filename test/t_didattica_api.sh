@@ -102,6 +102,27 @@ ok "risposte non in elenco → trattate come vuote" "$([ "$(echo "$R" | campo ok
 R=$(post consegna '{"k":"NONESISTE1","classe":"ICPA-5A","risposte":[0]}')
 ok "compito inesistente → err compito" "$([ "$(echo "$R" | campo err)" = "compito" ] && echo 1)"
 
+echo "— chiusura di sicurezza (revisione del 7/11) —"
+# 1. X-Forwarded-For non conta: il limite per IP si calcola sull'indirizzo vero
+cat > "$TMP/ipcheck.php" << 'EOF'
+<?php define('EDU_OK',1); require __DIR__.'/dati/config.php';
+$src=file_get_contents(__DIR__.'/api.php'); preg_match('/function edu_ip\(\)\{.*?\n\}/s',$src,$m); eval(substr($m[0],0));
+$_SERVER['REMOTE_ADDR']='10.0.0.7'; $_SERVER['HTTP_X_FORWARDED_FOR']='1.2.3.4'; $_SERVER['HTTP_CF_CONNECTING_IP']='5.6.7.8';
+echo edu_ip();
+EOF
+ok "l'IP per il limite è quello della connessione, non X-Forwarded-For" "$([ "$(curl -s "$U/ipcheck.php")" = "10.0.0.7" ] && echo 1)"
+# 2. la diagnostica con una chiave non-stringa → 403, non 500
+C=$(curl -s -o /dev/null -w '%{http_code}' "$U/api.php?action=diag&k[]=x")
+ok "diag con ?k[]=x → 403 pulito, non errore 500 ($C)" "$([ "$C" = "403" ] && echo 1)"
+# 3. nel dettaglio di un evento passano solo chiavi note, del tipo giusto
+post track '{"classe":"5A","lezione":"salinaio","tipo":"quiz_esito","dettaglio":{"live":"xyz","pct_classe":"tanto","punti":7,"su":10,"xss":"<script>","recap":[{"pct":50,"tot":3,"nick":"Marco"}]}}' >/dev/null
+EV=$(php -r '$s=json_decode(file_get_contents("/tmp/supa-edu-state.json"),true); echo json_encode($s["ultimo_evento"]["dettaglio"] ?? null);')
+ok "live:\"xyz\" diventa un booleano vero/falso" "$(echo "$EV" | php -r '$d=json_decode(stream_get_contents(STDIN),true); echo is_bool($d["live"]??null)?1:0;')"
+ok "pct_classe:\"tanto\" non passa" "$(echo "$EV" | php -r '$d=json_decode(stream_get_contents(STDIN),true); echo array_key_exists("pct_classe",$d)?0:1;')"
+ok "punti e su restano numeri" "$(echo "$EV" | php -r '$d=json_decode(stream_get_contents(STDIN),true); echo ($d["punti"]==7 && $d["su"]==10)?1:0;')"
+ok "una chiave sconosciuta non passa" "$(echo "$EV" | php -r '$d=json_decode(stream_get_contents(STDIN),true); echo array_key_exists("xss",$d)?0:1;')"
+ok "nel recap per domanda restano solo pct e tot, mai un nome" "$(echo "$EV" | php -r '$d=json_decode(stream_get_contents(STDIN),true); $r=$d["recap"][0]??[]; echo (isset($r["pct"]) && isset($r["tot"]) && !isset($r["nick"]))?1:0;')"
+
 echo "— il player resta intero —"
 R=$(api "$U/api.php?action=menu")
 ok "il menu funziona ancora e porta la didattica del corso" "$([ "$(echo "$R" | campo ok)" = "true" ] && [ "$(echo "$R" | campo corsi.0.didattica.uda.monte_ore)" = "14" ] && echo 1)"

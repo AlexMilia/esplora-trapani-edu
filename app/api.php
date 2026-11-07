@@ -13,6 +13,10 @@
    Azioni: menu | lezione&id=slug | lez&token=... | track (POST)
            esito (POST) | diario&classe=... | compito&k=... | consegna (POST)
    ===================================================================== */
+session_set_cookie_params([
+  'httponly' => true, 'samesite' => 'Lax',
+  'secure'   => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+]);
 session_start();
 define('EDU_OK', 1);
 require __DIR__ . '/dati/config.php';
@@ -40,10 +44,10 @@ header('X-Content-Type-Options: nosniff');
    sessione nuova a ogni richiesta e il contatore resta a 1. Questo invece
    conta per IP su file, ed è condiviso da api.php, live.php e attiva.php. */
 function edu_ip(){
+  /* SOLO l'indirizzo della connessione. Aruba non sta dietro un proxy che
+     riscrive X-Forwarded-For, quindi quell'header lo sceglie chi chiama:
+     fidarsene voleva dire un contatore nuovo a ogni richiesta e nessun limite. */
   $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-  foreach (['HTTP_CF_CONNECTING_IP','HTTP_X_FORWARDED_FOR'] as $h) {   /* proxy/CDN */
-    if (!empty($_SERVER[$h])) { $p = explode(',', $_SERVER[$h]); $ip = trim($p[0]); break; }
-  }
   return preg_replace('/[^0-9a-fA-F\.:]/', '', substr($ip, 0, 45));
 }
 function edu_throttle($azione = 'api', $max = 240, $finestra = 60){
@@ -85,7 +89,8 @@ if(isset($_GET['ver'])){
    Apri:  api.php?action=diag&k=LA_TUA_CHIAVE
    Non stampa mai la anon key, solo la sua lunghezza. */
 if(isset($_GET['action']) && $_GET['action'] === 'diag'){
-  $k = isset($_GET['k']) ? $_GET['k'] : '';
+  if(!edu_throttle('diag', 10, 300)){ header('Retry-After: 300'); edu_deny(429, 'rate'); } /* 10 tentativi / 5 min */
+  $k = isset($_GET['k']) && is_string($_GET['k']) ? $_GET['k'] : '';
   if($EDU_DIAG_KEY === '' || !hash_equals($EDU_DIAG_KEY, $k)) edu_deny(403, 'diag');
   $cacheFile = __DIR__ . '/dati/cache_catalogo.json';
   list($c1, $o1, $e1) = edu_supa('/rest/v1/rpc/edu_get_lezioni', ['p_progetto' => $EDU_PROGETTO]);
@@ -130,8 +135,9 @@ if(!isset($_SESSION['edu_t']) || !isset($_SESSION['edu_k'])
 /* ---- referer ---- */
 if($EDU_CHECK_REFERER){
   $ref  = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
-  $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
-  if($host === '' || strpos($ref, $host) === false){
+  $host = isset($_SERVER['HTTP_HOST']) ? strtolower(preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST'])) : '';
+  $refHost = strtolower((string)parse_url($ref, PHP_URL_HOST));   /* l'host vero, non una sottostringa */
+  if($host === '' || $refHost !== $host){
     edu_log('api_block', 'referer: ' . $ref);
     edu_deny(403, 'ref');
   }
@@ -452,8 +458,24 @@ if($action === 'track'){
     edu_deny(400, 'tipo');
   }
   $lezione = isset($b['lezione']) ? substr(preg_replace('/[^a-z0-9\-_]/', '', strtolower($b['lezione'])), 0, 40) : '';
-  $dettaglio = (isset($b['dettaglio']) && is_array($b['dettaglio'])) ? $b['dettaglio'] : [];
-  if(strlen(json_encode($dettaglio)) > 1500) $dettaglio = [];
+  $dIn = (isset($b['dettaglio']) && is_array($b['dettaglio'])) ? $b['dettaglio'] : [];
+  /* solo chiavi note, del tipo giusto: un valore storto qui (es. live:"xyz")
+     faceva fallire il calcolo delle statistiche di tutto il cliente */
+  $dettaglio = [];
+  foreach(['punti','su','pct','pct_classe','n_gioc','n_quiz'] as $kN){
+    if(isset($dIn[$kN]) && is_numeric($dIn[$kN])){ $v = (float)$dIn[$kN]; if($v >= 0 && $v <= 100000) $dettaglio[$kN] = $v; }
+  }
+  if(isset($dIn['live'])) $dettaglio['live'] = filter_var($dIn['live'], FILTER_VALIDATE_BOOLEAN);
+  if(isset($dIn['livello']) && in_array($dIn['livello'], ['junior','senior'], true)) $dettaglio['livello'] = $dIn['livello'];
+  if(isset($dIn['acc']) && in_array($dIn['acc'], ['standard','ipo','lis'], true)) $dettaglio['acc'] = $dIn['acc'];
+  if(isset($dIn['recap']) && is_array($dIn['recap'])){           /* per domanda: solo percentuale e totale */
+    $rc = [];
+    foreach(array_slice($dIn['recap'], 0, 40) as $q){
+      if(is_array($q)) $rc[] = ['pct' => (isset($q['pct']) && is_numeric($q['pct'])) ? (float)$q['pct'] : null,
+                                'tot' => (isset($q['tot']) && is_numeric($q['tot'])) ? (int)$q['tot'] : null];
+    }
+    if($rc) $dettaglio['recap'] = $rc;
+  }
   global $EDU_PROGETTO;
   $riga = [
     'codice_classe' => $classe,

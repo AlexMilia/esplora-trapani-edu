@@ -212,5 +212,5 @@ if ($p==='/rest/v1/rpc/edu_get_lezione_tenant'){
   'quiz2'=>null]);
 }
 if ($p==='/rest/v1/rpc/edu_get_mascotte') out([]);
-if ($p==='/rest/v1/edu_eventi') out([],201);
+if ($p==='/rest/v1/edu_eventi'){ $S['ultimo_evento']=$j; out([],201); }
 out(['message'=>'mock: rotta non gestita '.$p],404);

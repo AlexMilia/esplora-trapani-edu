@@ -18,6 +18,7 @@
 define('EDU_OK', 1);
 require __DIR__ . '/dati/config.php';
 header('Content-Type: application/json; charset=utf-8');
+header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store');
 
 function out($a, $code = 200){ http_response_code($code); echo json_encode($a, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES); exit; }

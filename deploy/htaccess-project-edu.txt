@@ -4,6 +4,13 @@
 # Le cartelle e i file che ESISTONO davvero (app/, mestieri/, verN/…)
 # non vengono toccati: il rewrite scatta solo per i percorsi "virtuali".
 # =============================================================
+# Su Aruba PHP gira in CGI/FastCGI e l'header Authorization non arriva a PHP
+# da solo: senza questa riga la regia Abbonamenti (stripe.php) risponde sempre 401.
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+# Mai mostrare gli errori PHP al pubblico (path e righe del server)
+<IfModule mod_php.c>
+  php_flag display_errors off
+</IfModule>
 RewriteEngine On
 RewriteBase /project/edu/
 # /project/edu/salina-culcasi  →  /project/edu/salina-culcasi/  (la barra finale serve:
