@@ -77,7 +77,7 @@ let p=0,f=0; const ok=(n,c)=>{c?(p++,console.log('  ✓ '+n)):(f++,console.log('
   ok('…e con il menu aperto sono spenti anche i comandi del video (non devono sembrare cliccabili)',
      ['btnIndietro','btnPausa','btnAvanti','btnElenco','btnScheda'].every(i=>d.getElementById(i).disabled));
   ok('la scheda non si apre se non c è una lezione in corso',
-     (()=>{ w.apriScheda(); return !d.getElementById('scheda').classList.contains('on'); })());
+     (()=>{ w.apriSchedaDocente(); return !d.getElementById('scheda').classList.contains('on'); })());
 
   console.log('— B. percorso della classe nel menu (diario dal server) —');
   ok('il diario è stato chiesto al server col codice classe',
@@ -124,7 +124,7 @@ let p=0,f=0; const ok=(n,c)=>{c?(p++,console.log('  ✓ '+n)):(f++,console.log('
   ok('‹ torna alla lezione precedente', w.__lezId2==='salinaio');
 
   console.log('— E. scheda della lezione (per il docente) —');
-  w.apriScheda(); await at(60);
+  w.apriSchedaDocente(); await at(60);
   const sb=d.getElementById('schedaBody').textContent;
   ok('la scheda si apre', d.getElementById('scheda').classList.contains('on'));
   ok('il video si mette in pausa quando si apre la scheda', d.getElementById('vid').paused);
@@ -135,7 +135,7 @@ let p=0,f=0; const ok=(n,c)=>{c?(p++,console.log('  ✓ '+n)):(f++,console.log('
      sb.includes('riconosce le tracce del passato') && sb.includes('vasca salante'));
   ok('mostra materiali e collegamenti al libro', sb.includes('sale grosso') && sb.includes('cap. 3'));
   ok('al livello medie mostra gli obiettivi delle medie, non quelli della primaria',
-     (()=>{ w.chiudiScheda(); w.setLivello('senior'); w.apriScheda();
+     (()=>{ w.chiudiScheda(); w.setLivello('senior'); w.apriSchedaDocente();
             const t=d.getElementById('schedaBody').textContent;
             const giusto=t.includes('spiega il ciclo del sale') && !t.includes('descrive il lavoro del salinaio');
             w.chiudiScheda(); w.setLivello('junior'); return giusto; })());
@@ -144,12 +144,12 @@ let p=0,f=0; const ok=(n,c)=>{c?(p++,console.log('  ✓ '+n)):(f++,console.log('
 
   console.log('— F. scheda non compilata e testo malevolo —');
   w.lezioneSucc(); await at(400);     /* corallaio: didattica vuota */
-  w.apriScheda(); await at(50);
+  w.apriSchedaDocente(); await at(50);
   ok('senza didattica la scheda lo dice, non resta vuota',
      d.getElementById('schedaBody').textContent.includes('non è ancora stata compilata'));
   w.chiudiScheda();
   inj(`LEZ.didattica={prima:"<img src=x onerror=window.__xss=1>",parole_chiave:["<b>grassetto</b>"]};`);
-  w.apriScheda(); await at(60);
+  w.apriSchedaDocente(); await at(60);
   ok('la scheda non esegue HTML messo nei campi didattici (niente XSS)',
      w.__xss===undefined && d.getElementById('schedaBody').querySelectorAll('img,script,iframe').length===0);
   ok('…e il testo si vede comunque come scritto',
