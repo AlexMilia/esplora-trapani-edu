@@ -10,6 +10,9 @@
    precedente/successiva, 📋 scheda della lezione per il docente, percorso
    della classe nel menu (lezioni fatte + esito), esito del quiz salvato
    come evidenza valutativa, «Prossima lezione» a fine lezione.
+   v2.7: recuperato da mestieri/ver8 il componente 'bordi-puliti' (riga nera
+   verticale sulla cucitura della sfera) e messo sotto test, perche' non si
+   riperda un'altra volta.
    v2.6: il riquadro dell'interprete LIS è misurato sull'altezza della
    finestra (su un portatile basso non copre più mezzo schermo) e la scelta
    grande/piccolo resta memorizzata.
@@ -77,6 +80,33 @@ edu_log('view', isset($_SERVER['QUERY_STRING']) ? $_SERVER['QUERY_STRING'] : '')
 <title><?php echo $B('titolo'); ?> — Lezioni</title>
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+<script>
+/* fix riga nera v2 (03/11/2026): i video Bunny (2162x1080) hanno le 2 colonne di bordo
+   scurite dal ridimensionamento: nella sfera si toccano e fanno una riga verticale.
+   NON si taglia l'immagine (tagliare crea uno scalino sulla giunzione): nello shader
+   le prime/ultime 2 colonne prendono il colore della 3a, la geometria resta identica
+   (i "?" non si spostano). Si riadatta da solo a ogni risoluzione HLS e a ogni clip. */
+AFRAME.registerComponent('bordi-puliti',{
+  schema:{px:{default:2.5}},
+  init(){ this.u={value:0}; },
+  tick(){
+    const mesh=this.el.getObject3D('mesh'); if(!mesh||!mesh.material) return;
+    const m=mesh.material, tx=m.map; if(!tx||!tx.image) return;
+    const W=tx.image.videoWidth||tx.image.naturalWidth||tx.image.width; if(!W) return;
+    this.u.value=this.data.px/W;
+    if(m.userData.bordiPuliti) return;
+    m.userData.bordiPuliti=true; const u=this.u;
+    m.onBeforeCompile=sh=>{
+      sh.uniforms.eduBordo=u;
+      sh.fragmentShader='uniform float eduBordo;\n'+sh.fragmentShader.replace('#include <map_fragment>',
+        THREE.ShaderChunk.map_fragment.replace('texture2D( map, vMapUv )',
+          'texture2D( map, vec2( clamp( vMapUv.x, eduBordo, 1.0 - eduBordo ), vMapUv.y ) )'));
+    };
+    m.customProgramCacheKey=()=>'bordi-puliti';
+    m.needsUpdate=true;
+  }
+});
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
@@ -575,7 +605,7 @@ window.EDU_BASE = <?php echo json_encode(rtrim(dirname($_SERVER['SCRIPT_NAME'] ?
 
 <a-scene vr-mode-ui="enabled:false" loading-screen="dotsColor:#e8788a;backgroundColor:#0b0d10">
   <a-assets><video id="vid" playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video></a-assets>
-  <a-videosphere id="vsky" rotation="0 -90 0" src="#vid"></a-videosphere>
+  <a-videosphere id="vsky" bordi-puliti rotation="0 -90 0" src="#vid"></a-videosphere>
   <a-entity id="hotspots"></a-entity>
   <a-entity cursor="rayOrigin: mouse" raycaster="objects:.hot;far:60"></a-entity>
   <a-camera id="cam" look-controls="reverseMouseDrag:true" wasd-controls="enabled:false"></a-camera>

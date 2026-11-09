@@ -5,7 +5,7 @@ Prerequisiti: `node` ≥ 18, `php-cli` **con estensione curl**, `postgresql` ≥
 
 ```bash
 npm install                 # una volta: installa jsdom
-npm test                    # player + regia + analisi statica (15 suite, 281 verifiche)
+npm test                    # player + regia + analisi statica (17 suite, 300 verifiche)
 bash test/t_api26.sh        # api.php offline (cache precompilata, server PHP integrato)
 bash test/t_didattica_api.sh # esiti, diario, compiti su un Supabase finto (30 verifiche)
 bash test/t_live_gc.sh      # le stanze del quiz live spariscono dopo 3 ore (privacy dichiarata)
@@ -26,6 +26,7 @@ DBURL=postgresql://utente:password@127.0.0.1/edu_test bash test/db_avvia.sh   # 
 | Stripe | `t_stripe_avvia.sh` → `t_stripe.sh` | crea/pausa/riprendi/annulla, idempotency key, chiave service mai sostituita dal token utente, webhook (firma, replay, eventi estranei), setup prezzi |
 | DB | `db_avvia.sh` | ricrea `edu_test` da `migrazioni/replica.sql` (replica dello schema di produzione), applica `migrazione_completa.sql` **due volte** (idempotenza), carica `fixture_test.sql`, poi `t_rls_matrice.sql` (ruoli × tabelle × operazioni: deve stampare zero scostamenti), `t_flusso_tenant.sql` (nuovo tenant end-to-end con RLS attiva), `t_abbonamenti.sql` (ciclo di vita dell'abbonamento via eventi), `t_didattica.sql` (esiti, diario, compiti e permessi della migrazione 32), `t_schede_seed.sql` (migrazione 33: i testi delle schede entrano nelle lezioni senza sovrascrivere il lavoro fatto in regia), `t_sicurezza.sql` (migrazione 34: quello che la chiave pubblica NON può fare — viste, funzioni riservate, eventi storti, richieste manomesse; la replica riproduce i privilegi di default di Supabase, e senza la 34 queste verifiche sono rosse) |
 | Live | `t_live_flussi.sh`, `stress-live.js N stanze secondi` | casi limite del quiz live e carico (500 alunni) |
+| Riga nera della sfera | `t_bordi.js` | il componente `bordi-puliti`: i video Bunny hanno le due colonne di bordo scurite dal ridimensionamento e sulla sfera si toccano, disegnando una riga verticale. Il test esegue davvero la logica del componente con un three finto: bordo calcolato sulla larghezza vera del video (si riadatta quando HLS cambia risoluzione), shader compilato una sola volta, `clamp` sulla coordinata orizzontale e **solo** su quella, e i casi in cui il video non è ancora pronto. Verifica anche che l'attributo sia rimasto sulla `<a-videosphere>`: la correzione era già stata scritta per ver8 e si era persa nel passaggio alla repository |
 | Bussola del player | `t_bussola.js` | il punto che brilla fuori dallo schermo: soglia calcolata sul campo visivo vero (LIM, tablet e telefono in verticale danno numeri diversi), verso più corto per girare, freccia sul bordo, giro automatico della scena dopo l'attesa, precedenza al dito di chi trascina, e dati storti dalla regia che non devono mandare la scena chissà dove |
 | Privacy del live | `t_live_gc.sh` | le stanze con i soprannomi degli alunni vengono davvero cancellate dopo 3 ore (è ciò che l'informativa alle famiglie dichiara), e le partite in corso non vengono toccate |
 | Schede da stampare | `t_scheda.sh` | `scheda.php` contro `mock/supa-edu-mock.php`: contenuto preso dai dati della lezione, fasi mescolate ma **stabili fra una stampa e l'altra**, livelli primaria/medie, le dieci pagine dell'adattata (comprese le due carte del ruolo nel quiz, LIM e telefoni), i ripieghi quando la lezione è incompleta, e la sicurezza (nessuna chiave nella pagina, `noindex`, solo anon key, nome della scuola nell'indirizzo che non inietta codice). Le ultime due verifiche stampano davvero con Playwright e contano le pagine del PDF: 2 per la standard, 10 per l'adattata |
@@ -38,6 +39,8 @@ servono Apache con `mod_rewrite` + `mod_php` e l'app copiata in `/var/www/html/p
 ## Regole (pagate care)
 
 - **Mai stubbare una funzione dell'app** per far passare un test: se non esiste in jsdom, non esiste nel browser.
+- Una correzione che vive solo su una cartella del server (`mestieri/ver8/`) **non esiste**: prima o poi una
+  versione nuova la sovrascrive e il difetto torna. Quando ne recuperi una, portala in `app/` **con un test**.
 - I test SQL girano sulla **replica**, mai sul progetto Supabase vero (che è condiviso con ASK Trapani).
 - `fixture_test.sql` esiste perché la replica rispecchia la produzione (dove `2222…` è un admin) mentre i test vogliono un editor della Salina e un secondo cliente licenziatario: non va mai applicata in produzione.
 - Quando Supabase stampa un errore su una migrazione, **tutto il file è stato annullato**: correggi e rilancia da capo.

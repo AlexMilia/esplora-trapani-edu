@@ -29,14 +29,20 @@ function analizza(nome, src) {
     /\bfunction\s*[\w$]*\s*\(([^)]*)\)/g,
     /\(([^()]*)\)\s*=>/g,
     /([A-Za-z_$][\w$]*)\s*=>/g,
-    /\bcatch\s*\(\s*([A-Za-z_$][\w$]*)\s*\)/g
+    /\bcatch\s*\(\s*([A-Za-z_$][\w$]*)\s*\)/g,
+    /* metodo abbreviato dentro un oggetto —  init(){…}  tick(){…}  — come nei
+       componenti A-Frame: e' una DEFINIZIONE, non una chiamata (le parole chiave
+       del linguaggio sono escluse sotto) */
+    /(?:^|[{,;]\s*)([A-Za-z_$][\w$]*)\s*\([^()]*\)\s*\{/gm
   ];
   const puro = pulisci(src);
   // nomi controllati con `typeof nome` (es. il wrapper UMD `typeof define === 'function' && define.amd`
   // della libreria QR dentro live-lim.js) sono opzionali per costruzione: non vanno segnalati
   for (const g of puro.matchAll(/\btypeof\s+([A-Za-z_$][\w$]*)/g)) def.add(g[1]);
+  const PAROLE = new Set(['if','for','while','switch','catch','function','return','typeof','do','else','with']);
   for (const re of regexDef) while ((m = re.exec(puro))) m[1].split(',').forEach(x => {
-    const id = x.trim().split(/[=:\s]/)[0].replace(/^\.\.\./, ''); if (/^[A-Za-z_$][\w$]*$/.test(id)) def.add(id);
+    const id = x.trim().split(/[=:\s]/)[0].replace(/^\.\.\./, '');
+    if (/^[A-Za-z_$][\w$]*$/.test(id) && !PAROLE.has(id)) def.add(id);
   });
   const chiamate = new Map(); const rc = /(^|[^.\w$])([A-Za-z_$][\w$]*)\s*\(/g;
   while ((m = rc.exec(puro))) { const f = m[2]; if (!builtin.has(f) && !def.has(f) && !/^[A-Z]/.test(f)) chiamate.set(f, (chiamate.get(f) || 0) + 1); }
