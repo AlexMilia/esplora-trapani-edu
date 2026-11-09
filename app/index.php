@@ -10,6 +10,9 @@
    precedente/successiva, 📋 scheda della lezione per il docente, percorso
    della classe nel menu (lezioni fatte + esito), esito del quiz salvato
    come evidenza valutativa, «Prossima lezione» a fine lezione.
+   v2.6: il riquadro dell'interprete LIS è misurato sull'altezza della
+   finestra (su un portatile basso non copre più mezzo schermo) e la scelta
+   grande/piccolo resta memorizzata.
    v2.5: la bussola porta l'occhio sul punto che brilla — soglia di «fuori
    dallo schermo» calcolata sul campo visivo vero (un telefono in verticale
    vede molto meno di una LIM), freccia grande sul bordo che si tocca, e la
@@ -219,17 +222,19 @@ edu_log('view', isset($_SERVER['QUERY_STRING']) ? $_SERVER['QUERY_STRING'] : '')
 
   /* LIS (body.lis): finestra dell'interprete in basso a destra, sempre
      sopra il 360 e sotto gli overlay; sincronizzata con il video della lezione. */
-  #lisBox{display:none;position:fixed;right:16px;bottom:96px;z-index:36;width:min(34vw,420px);aspect-ratio:9/12;
+  #lisBox{display:none;position:fixed;right:16px;bottom:88px;z-index:36;
+    height:min(30vh,320px);width:auto;aspect-ratio:9/12;   /* misura sull'altezza: su un portatile
+       basso non divora mezzo schermo come faceva con width:34vw (v2.6) */
     background:#000;border:3px solid #fff;border-radius:14px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.6)}
   body.lis #lisBox.on{display:block}
   #lisBox video{width:100%;height:100%;object-fit:cover;display:block}
-  #lisBox .lisTag{position:absolute;left:8px;top:8px;background:rgba(0,0,0,.7);color:#fff;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px}
-  #lisBox .lisSize{position:absolute;right:8px;top:8px;background:rgba(0,0,0,.7);color:#fff;border:0;border-radius:999px;width:34px;height:34px;cursor:pointer;font-size:16px}
-  #lisBox.big{width:min(48vw,640px);aspect-ratio:4/3}
+  #lisBox .lisTag{position:absolute;left:6px;top:6px;background:rgba(0,0,0,.7);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px}
+  #lisBox .lisSize{position:absolute;right:6px;top:6px;background:rgba(0,0,0,.7);color:#fff;border:0;border-radius:999px;width:30px;height:30px;cursor:pointer;font-size:15px}
+  #lisBox.big{height:min(52vh,560px);width:auto;aspect-ratio:9/12}
   #lisBox .lisMiss{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;color:#fff;font-size:14px;padding:14px;background:#222}
   #lisBox.miss .lisMiss{display:flex}
   body.lis .cocciu{right:auto;left:16px}
-  @media (max-width:900px){ #lisBox{width:42vw;bottom:120px} body.ipo .card h1{font-size:34px} body.ipo .card p,body.ipo #scTxt,body.ipo #quiz .opt{font-size:24px} body.ipo #quiz .q{font-size:28px} }
+  @media (max-width:900px){ #lisBox{height:min(24vh,220px);width:auto;bottom:112px} body.ipo .card h1{font-size:34px} body.ipo .card p,body.ipo #scTxt,body.ipo #quiz .opt{font-size:24px} body.ipo #quiz .q{font-size:28px} }
 
   body.dsa,body.dsa button,body.dsa input{font-family:'Atkinson Hyperlegible',-apple-system,sans-serif}
   body.dsa .card p,body.dsa #scoperta p,body.dsa .elItem p{font-size:18px;line-height:1.8;letter-spacing:.01em;opacity:1}
@@ -825,7 +830,12 @@ function lisSync(force){
   if(vid.paused){ lisVid.pause(); } else { lisVid.play().catch(()=>{}); }
   if(Math.abs((lisVid.currentTime||0)-(vid.currentTime||0))>0.6) lisVid.currentTime=vid.currentTime||0;
 }
-function lisToggleSize(){ document.getElementById('lisBox').classList.toggle('big'); }
+function lisToggleSize(){ const b=document.getElementById('lisBox');
+  const grande=b.classList.toggle('big');
+  try{ localStorage.setItem('edu_lis_big', grande?'1':'0'); }catch(e){}
+}
+/* il docente lo ingrandisce una volta e resta cosi' anche domani */
+try{ if(localStorage.getItem('edu_lis_big')==='1') document.getElementById('lisBox').classList.add('big'); }catch(e){}
 vid.addEventListener('play',()=>lisSync()); vid.addEventListener('pause',()=>lisSync());
 vid.addEventListener('seeked',()=>lisSync()); vid.addEventListener('loadedmetadata',()=>lisSync(true));
 setInterval(()=>{ if(ACC==='lis'&&started&&!vid.paused)lisSync(); },2000);
