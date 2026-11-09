@@ -10,6 +10,9 @@
    precedente/successiva, 📋 scheda della lezione per il docente, percorso
    della classe nel menu (lezioni fatte + esito), esito del quiz salvato
    come evidenza valutativa, «Prossima lezione» a fine lezione.
+   v2.8: il tenant non si deduce piu' da una cartella di lavoro. Aprire lo zip
+   da /edu/definitiva/index.php faceva credere al player che la scuola si
+   chiamasse "definitiva", e schede e compiti rispondevano "licenza non attiva".
    v2.7: recuperato da mestieri/ver8 il componente 'bordi-puliti' (riga nera
    verticale sulla cucitura della sfera) e messo sotto test, perche' non si
    riperda un'altra volta.
@@ -39,9 +42,16 @@ require __DIR__ . '/dati/config.php';
 function edu_tenant_slug(){
   global $EDU_TENANT_DEFAULT;
   $s = isset($_GET['c']) ? strtolower(trim($_GET['c'])) : '';
-  if($s === '' && isset($_SERVER['REQUEST_URI'])
-     && preg_match('#/edu/([a-z0-9][a-z0-9-]{1,40})/#', strtolower($_SERVER['REQUEST_URI']), $m)
-     && !in_array($m[1], ['app','mestieri','saline'], true) && !preg_match('/^ver\d+$/', $m[1])){
+  /* Un tenant si apre con /edu/{slug}/ : l'.htaccess riscrive e nell'indirizzo
+     NON compare nessun .php. Se invece l'indirizzo chiama un file per nome
+     (/edu/definitiva/index.php, /edu/prova/scheda.php) allora quel pezzo e' il
+     nome di una CARTELLA, non di una scuola: scambiarlo per un cliente faceva
+     fallire schede e compiti con "licenza non attiva" (v2.8). */
+  $uri = strtolower($_SERVER['REQUEST_URI'] ?? '');
+  $percorso = strtok($uri, '?');
+  if($s === '' && $percorso !== false && substr($percorso, -4) !== '.php'
+     && preg_match('#/edu/([a-z0-9][a-z0-9-]{1,40})/#', $percorso, $m)
+     && !in_array($m[1], ['app','mestieri','saline','definitiva'], true) && !preg_match('/^ver\d+$/', $m[1])){
     $s = $m[1];
   }
   if($s === '' && isset($EDU_TENANT_DEFAULT)) $s = (string)$EDU_TENANT_DEFAULT;
