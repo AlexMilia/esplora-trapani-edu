@@ -45,8 +45,19 @@ begin
           '{"img":"https://www.alessandromilia.it/project/esplora/mascotte.png","nome":"Trapani","video":{"junior":{},"senior":{},"entrambi":{}},"junior":true,"senior":true,"quiz_sempre":true}'::jsonb,
           '{"mappa":true}'::jsonb)
   returning id into v_corso;
+  -- Chi lo vede. All'inizio SOLO la scuola di prova: vetrina e IC Pagoto ricevono la riga
+  -- ma sospesa, e la accende la migrazione 37 quando il player v2.9 è nella cartella
+  -- che usano le scuole (quello vecchio mostrerebbe i video senza tagli).
+  insert into edu_clienti (slug, nome, brand, piano, licenza_stato, licenza_inizio, note)
+  select 'prova-trapani', 'Prova · area Trapani',
+         '{"titolo":"Trapani, la città a forma di falce","sottotitolo":"Scuola di prova","emoji":"⚓","colore":"blu","claim":"Scegli un punto sulla mappa: entrerai nel luogo in 360°.<br>Trascina lo schermo per guardarti intorno e tocca i punti che brillano!"}'::jsonb,
+         'base', 'attiva', current_date, 'Scuola di prova per guardare l''area Trapani prima di accenderla alle scuole (migr. 36). Si può cancellare dopo.'
+  where not exists (select 1 from edu_clienti where slug = 'prova-trapani');
   insert into edu_catalogo (corso_id, cliente_id, stato, da, note)
-  values (v_corso, v_cli, 'attivo', current_date, 'Corso proprio (migr. 36)')
+  select v_corso, id, 'attivo', current_date, 'Scuola di prova (migr. 36)' from edu_clienti where slug = 'prova-trapani'
+  on conflict (corso_id, cliente_id) do nothing;
+  insert into edu_catalogo (corso_id, cliente_id, stato, da, note)
+  values (v_corso, v_cli, 'sospeso', current_date, 'Corso proprio (migr. 36): si accende con la migr. 37')
   on conflict (corso_id, cliente_id) do nothing;
 
 
@@ -511,12 +522,13 @@ end $trapani$;
 
 -- Licenza anche all'IC Pagoto (deciso il 10/11/2026), con la stessa scadenza della
 -- sua licenza di Antichi Mestieri. Sta fuori dal blocco sopra perché deve valere
--- anche se il corso c'era già; se la riga esiste (anche sospesa) non viene toccata.
+-- anche se il corso c'era già; se la riga esiste non viene toccata. Nasce SOSPESA:
+-- la accende la migrazione 37.
 insert into edu_catalogo (corso_id, cliente_id, stato, da, a, note)
-select co.id, k.id, 'attivo', current_date,
+select co.id, k.id, 'sospeso', current_date,
        (select c2.a from edu_catalogo c2 join edu_corsi am on am.id = c2.corso_id
          where c2.cliente_id = k.id and am.slug = 'antichi-mestieri' and am.proprietario_id = co.proprietario_id limit 1),
-       'Area Trapani (migr. 36)'
+       'Area Trapani (migr. 36): si accende con la migr. 37'
 from edu_corsi co
 join edu_clienti v on v.id = co.proprietario_id and v.slug = 'esplora-trapani'
 join edu_clienti k on k.slug = 'ic-pagoto'

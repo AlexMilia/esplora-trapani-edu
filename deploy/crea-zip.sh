@@ -48,7 +48,8 @@ cp migrazioni/migrazione_completa.sql "$D/migrazioni/"
 cp migrazioni/migrazione_29_rls_consolidata.sql migrazioni/migrazione_30_abbonamenti.sql \
    migrazioni/migrazione_31_elenco_clienti.sql migrazioni/migrazione_32_didattica.sql \
    migrazioni/migrazione_33_schede_contenuti.sql migrazioni/migrazione_34_chiusura_sicurezza.sql \
-   migrazioni/migrazione_35_clip_tagli_mappa.sql migrazioni/migrazione_36_area_trapani.sql "$D/migrazioni/"
+   migrazioni/migrazione_35_clip_tagli_mappa.sql migrazioni/migrazione_36_area_trapani.sql \
+   migrazioni/migrazione_37_accendi_trapani.sql "$D/migrazioni/"
 
 # ---- i passi -----------------------------------------------------------------
 cp deploy/LEGGIMI-METTI-ONLINE.md "$D/"

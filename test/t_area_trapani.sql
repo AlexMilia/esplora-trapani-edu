@@ -30,7 +30,17 @@ select _ok('ogni lezione ha il suo luogo con nome e coordinate dentro Trapani',
      or (l.didattica->'luogo'->>'lat')::numeric not between 38.010 and 38.022
      or (l.didattica->'luogo'->>'lng')::numeric not between 12.495 and 12.520));
 
-\echo '=== 2. che cosa vede una scuola (ruolo anon, come il player) ==='
+\echo '=== 2a. prima dell''accensione: solo la scuola di prova ==='
+set role anon;
+select _ok('la scuola di prova vede SOLO l''area Trapani, con 11 lezioni',
+  (select string_agg(x->>'id' || ':' || jsonb_array_length(x->'lezioni'), ',') from jsonb_array_elements(edu_get_corsi('prova-trapani')) x) = 'trapani-citta:11');
+select _ok('la scuola di prova apre la lezione', jsonb_array_length(edu_get_lezione_tenant('prova-trapani','trapani-collegio')->'video') = 3);
+select _ok('vetrina e IC Pagoto NON la vedono ancora (il loro player è quello vecchio)',
+  not exists (select 1 from jsonb_array_elements(edu_get_corsi('esplora-trapani') || edu_get_corsi('ic-pagoto')) x where x->>'id'='trapani-citta'));
+reset role;
+\ir ../migrazioni/migrazione_37_accendi_trapani.sql
+
+\echo '=== 2b. dopo la migrazione 37: che cosa vede una scuola (ruolo anon, come il player) ==='
 set role anon;
 select _ok('il tenant vetrina vede il corso nell''elenco, con 11 lezioni',
   (select jsonb_array_length(x->'lezioni') from jsonb_array_elements(edu_get_corsi('esplora-trapani')) x where x->>'id'='trapani-citta') = 11);
@@ -113,9 +123,10 @@ delete from edu_quiz where lezione_id = (select id from _tp_lez where slug = 'tr
 \ir ../migrazioni/migrazione_36_area_trapani.sql
 select _ok('il titolo corretto a mano resta', (select titolo from edu_lezioni where slug='trapani-leone') = 'TITOLO CORRETTO IN REGIA');
 select _ok('le domande cancellate a mano non ricompaiono', (select count(*) from edu_quiz where lezione_id = (select id from _tp_lez where slug='trapani-falce')) = 0);
-update edu_catalogo set stato='sospeso' where corso_id=(select id from edu_corsi where slug='trapani-citta') and cliente_id=(select id from edu_clienti where slug='ic-pagoto');
+update edu_catalogo set stato='sospeso', note='sospesa a mano' where corso_id=(select id from edu_corsi where slug='trapani-citta') and cliente_id=(select id from edu_clienti where slug='ic-pagoto');
 \ir ../migrazioni/migrazione_36_area_trapani.sql
-select _ok('una licenza sospesa a mano resta sospesa', (select stato from edu_catalogo where corso_id=(select id from edu_corsi where slug='trapani-citta') and cliente_id=(select id from edu_clienti where slug='ic-pagoto')) = 'sospeso');
+\ir ../migrazioni/migrazione_37_accendi_trapani.sql
+select _ok('una licenza sospesa a mano resta sospesa, anche rilanciando 36 e 37', (select stato from edu_catalogo where corso_id=(select id from edu_corsi where slug='trapani-citta') and cliente_id=(select id from edu_clienti where slug='ic-pagoto')) = 'sospeso');
 select _ok('niente doppioni: sempre 1 corso, 11 lezioni, 13 racconti',
   (select count(*) from edu_corsi where slug='trapani-citta') = 1 and (select count(*) from _tp_lez) = 11
   and (select count(*) from edu_media m join _tp_lez l on l.id = m.lezione_id) = 13);
