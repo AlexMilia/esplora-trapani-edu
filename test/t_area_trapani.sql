@@ -10,6 +10,9 @@ grant execute on function _ok(text,boolean) to anon, authenticated, tester;
 create or replace view _tp_lez as
   select l.* from edu_lezioni l join edu_corsi c on c.id = l.corso_id where c.slug = 'trapani-citta';
 
+-- nella replica l'IC Pagoto nasce con le fixture, dopo le migrazioni: rilancio la 36 perché riceva la licenza
+\ir ../migrazioni/migrazione_36_area_trapani.sql
+
 \echo '=== 1. il corso ==='
 select _ok('il corso c''è, pubblicato e a catalogo, del tenant vetrina',
   exists (select 1 from edu_corsi c join edu_clienti k on k.id = c.proprietario_id
@@ -38,8 +41,10 @@ select _ok('l''elenco porta didattica.mappa', (select x->'didattica'->'mappa' fr
 select _ok('nell''elenco il corso sta dopo i due già pubblicati',
   (select array_position(array_agg(x->>'id' order by o), 'trapani-citta') from jsonb_array_elements(edu_get_corsi('esplora-trapani')) with ordinality t(x,o))
   > (select array_position(array_agg(x->>'id' order by o), 'antichi-mestieri') from jsonb_array_elements(edu_get_corsi('esplora-trapani')) with ordinality t(x,o)));
-select _ok('una scuola senza licenza per questo corso NON lo vede (ic-pagoto)',
-  not exists (select 1 from jsonb_array_elements(edu_get_corsi('ic-pagoto')) x where x->>'id'='trapani-citta'));
+select _ok('l''IC Pagoto, che ha la licenza, lo vede con le 11 lezioni',
+  (select jsonb_array_length(x->'lezioni') from jsonb_array_elements(edu_get_corsi('ic-pagoto')) x where x->>'id'='trapani-citta') = 11);
+select _ok('un cliente senza licenza per questo corso NON lo vede (salina-culcasi)',
+  not exists (select 1 from jsonb_array_elements(edu_get_corsi('salina-culcasi')) x where x->>'id'='trapani-citta'));
 select _ok('la lezione arriva al player con taglio, voce e sottotitoli (Collegio, 3 clip)',
   (select count(*) from jsonb_array_elements(edu_get_lezione_tenant('esplora-trapani','trapani-collegio')->'video') v
     where (v->>'da')::numeric >= 0 and (v->>'a')::numeric > (v->>'da')::numeric and (v->>'t0') is not null
@@ -47,9 +52,10 @@ select _ok('la lezione arriva al player con taglio, voce e sottotitoli (Collegio
       and (v->'audio'->>'loop')::boolean = false and (v->>'tit') is not null) = 3);
 select _ok('…e ogni clip del Collegio ha le sue fermate (v = 0, 1, 2)',
   (select count(distinct t->>'v') from jsonb_array_elements(edu_get_lezione_tenant('esplora-trapani','trapani-collegio')->'tappe') t) = 3);
-select _ok('una scuola senza licenza non apre la lezione nemmeno conoscendone il nome',
-  coalesce(edu_get_lezione_tenant('ic-pagoto','trapani-collegio')->'video', '[]'::jsonb) = '[]'::jsonb
-  or edu_get_lezione_tenant('ic-pagoto','trapani-collegio') is null);
+select _ok('l''IC Pagoto apre la lezione', jsonb_array_length(edu_get_lezione_tenant('ic-pagoto','trapani-collegio')->'video') = 3);
+select _ok('un cliente senza licenza non apre la lezione nemmeno conoscendone il nome',
+  coalesce(edu_get_lezione_tenant('salina-culcasi','trapani-collegio')->'video', '[]'::jsonb) = '[]'::jsonb
+  or edu_get_lezione_tenant('salina-culcasi','trapani-collegio') is null);
 \echo '(atteso errore: anon non legge le tabelle)'
 select count(*) from edu_media;
 reset role;
@@ -107,6 +113,9 @@ delete from edu_quiz where lezione_id = (select id from _tp_lez where slug = 'tr
 \ir ../migrazioni/migrazione_36_area_trapani.sql
 select _ok('il titolo corretto a mano resta', (select titolo from edu_lezioni where slug='trapani-leone') = 'TITOLO CORRETTO IN REGIA');
 select _ok('le domande cancellate a mano non ricompaiono', (select count(*) from edu_quiz where lezione_id = (select id from _tp_lez where slug='trapani-falce')) = 0);
+update edu_catalogo set stato='sospeso' where corso_id=(select id from edu_corsi where slug='trapani-citta') and cliente_id=(select id from edu_clienti where slug='ic-pagoto');
+\ir ../migrazioni/migrazione_36_area_trapani.sql
+select _ok('una licenza sospesa a mano resta sospesa', (select stato from edu_catalogo where corso_id=(select id from edu_corsi where slug='trapani-citta') and cliente_id=(select id from edu_clienti where slug='ic-pagoto')) = 'sospeso');
 select _ok('niente doppioni: sempre 1 corso, 11 lezioni, 13 racconti',
   (select count(*) from edu_corsi where slug='trapani-citta') = 1 and (select count(*) from _tp_lez) = 11
   and (select count(*) from edu_media m join _tp_lez l on l.id = m.lezione_id) = 13);

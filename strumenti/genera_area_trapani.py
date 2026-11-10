@@ -92,6 +92,7 @@ out.append('''-- ============================================================
 --
 -- Che cosa crea
 --   · un corso a catalogo del tenant vetrina «esplora-trapani», pubblicato,
+--     con licenza anche per l'IC Pagoto (stessa scadenza di Antichi Mestieri),
 --     terzo dopo Antichi Mestieri (10) e Il viaggio di una goccia (20)
 --   · 11 lezioni, una per luogo, con 13 racconti a 360° di U Cuntastorie
 --   · per ogni racconto: taglio del video, voce a parte, sottotitoli, fermate
@@ -202,6 +203,20 @@ for i, (slug, tit, sub, em, col, luogo, racconti) in enumerate(LEZIONI):
 out.append('''
   raise notice 'migr. 36: creata l''area Trapani (% lezioni)', (select count(*) from edu_lezioni where corso_id = v_corso);
 end $trapani$;
+
+-- Licenza anche all'IC Pagoto (deciso il 10/11/2026), con la stessa scadenza della
+-- sua licenza di Antichi Mestieri. Sta fuori dal blocco sopra perché deve valere
+-- anche se il corso c'era già; se la riga esiste (anche sospesa) non viene toccata.
+insert into edu_catalogo (corso_id, cliente_id, stato, da, a, note)
+select co.id, k.id, 'attivo', current_date,
+       (select c2.a from edu_catalogo c2 join edu_corsi am on am.id = c2.corso_id
+         where c2.cliente_id = k.id and am.slug = 'antichi-mestieri' and am.proprietario_id = co.proprietario_id limit 1),
+       'Area Trapani (migr. 36)'
+from edu_corsi co
+join edu_clienti v on v.id = co.proprietario_id and v.slug = 'esplora-trapani'
+join edu_clienti k on k.slug = 'ic-pagoto'
+where co.slug = 'trapani-citta'
+on conflict (corso_id, cliente_id) do nothing;
 ''')
 assert tot_racconti == 13 and len(LEZIONI) == 11
 open('migrazioni/migrazione_36_area_trapani.sql', 'w').write('\n'.join(out))

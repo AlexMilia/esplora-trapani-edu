@@ -20,14 +20,14 @@ Terzo caso di studio per le scuole, dopo Antichi Mestieri e Il viaggio di una go
 - I campi nuovi **non sono ancora modificabili dalla regia**: per ora si scrivono con la migrazione.
 
 ### I contenuti — migrazione 36 (generata da `strumenti/genera_area_trapani.py`)
-- Corso `trapani-citta` del tenant vetrina, pubblicato, a catalogo, ordine 25. **11 lezioni, 13 racconti**: più racconti nello stesso luogo fanno una lezione sola (la chiesa del Collegio ne ha tre). Le due Mura di Tramontana restano due lezioni: sono a 250 metri.
+- Corso `trapani-citta` del tenant vetrina, pubblicato, a catalogo, ordine 25, con licenza anche per l'IC Pagoto (stessa scadenza della sua licenza di Antichi Mestieri). **11 lezioni, 13 racconti**: più racconti nello stesso luogo fanno una lezione sola (la chiesa del Collegio ne ha tre). Le due Mura di Tramontana restano due lezioni: sono a 250 metri.
 - Esclusi il racconto che presentava il giro e la ginnastica in piazza. Tagliati i due punti in cui la voce parla dell'evento (l'apertura di Sant'Agostino, l'inizio e il saluto finale di Villa Margherita). Il generatore **si ferma** se in un testo trova una parola dell'evento.
 - Per ogni racconto: fermate con il punto «?» già validato e due testi (primaria/medie); due domande per livello a racconto, con la risposta giusta in posizioni diverse.
 - Ripetibile e prudente: se il corso esiste già non tocca nulla, quindi le correzioni fatte in regia restano.
 - Voce e sottotitoli restano nei file del sito della camminata (`/project/attenti-a-quei-due/ver2/`): **se quella cartella viene spostata o cancellata, le lezioni restano senza voce.**
 
 ### Test
-`t_clip.js` (39), `t_mappa.js` (54, Leaflet finto), `t_mappa_browser.sh` (26, Chromium vero: hover, doppio tocco, telefono), `t_area_trapani.sql` (32, con il ruolo `anon` come il player). Ogni test è stato visto fallire sul codice sbagliato prima di passare su quello giusto.
+`t_clip.js` (39), `t_mappa.js` (54, Leaflet finto), `t_mappa_browser.sh` (26, Chromium vero: hover, doppio tocco, telefono), `t_area_trapani.sql` (35, con il ruolo `anon` come il player). Ogni test è stato visto fallire sul codice sbagliato prima di passare su quello giusto.
 
 ### Ordine di messa online
 1. Caricare `app/index.php` e la cartella `app/lib/`. 2. Applicare la migrazione 35, poi la 36. 3. Cancellare `app/dati/cache_*.json`. **Mai la 36 prima del player nuovo**: quello vecchio mostrerebbe i video senza tagli e con la voce fuori tempo.
