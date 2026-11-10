@@ -1,0 +1,330 @@
+[
+    {
+        "em": "🛠️",
+        "id": "antichi-mestieri",
+        "cls": "oro",
+        "sub": "Salinaio, corallo, marmo, tappeti di Erice, vendemmia, olive",
+        "tit": "Antichi Mestieri di Trapani",
+        "desc": null,
+        "uuid": "3ca9c6a2-9bc2-43b8-b4fa-ce43632bec00",
+        "stato": "pubblicato",
+        "fascia": "entrambe",
+        "ordine": 10,
+        "lezioni": [
+            {
+                "em": null,
+                "id": "corallo",
+                "acc": {
+                },
+                "cls": null,
+                "sub": null,
+                "tit": "Il corallo",
+                "luogo": null,
+                "stato": "pubblicata",
+                "durata": null
+            },
+            {
+                "em": null,
+                "id": "tappeti-ericini",
+                "acc": {
+                },
+                "cls": null,
+                "sub": null,
+                "tit": "Il tessitore di tappeti ericini",
+                "luogo": null,
+                "stato": "pubblicata",
+                "durata": null
+            },
+            {
+                "em": null,
+                "id": "raccolta-delle-olive",
+                "acc": {
+                },
+                "cls": null,
+                "sub": null,
+                "tit": "La raccolta delle olive",
+                "luogo": null,
+                "stato": "pubblicata",
+                "durata": null
+            },
+            {
+                "em": null,
+                "id": "vendemmia",
+                "acc": {
+                },
+                "cls": null,
+                "sub": null,
+                "tit": "La vendemmia",
+                "luogo": null,
+                "stato": "pubblicata",
+                "durata": null
+            }
+        ],
+        "origine": "proprio",
+        "prologo": null,
+        "mascotte": {
+            "img": "https://x.it/c.png",
+            "nome": "Coccio",
+            "video": {
+                "junior": {
+                },
+                "senior": {
+                },
+                "entrambi": {
+                }
+            },
+            "junior": true,
+            "senior": true,
+            "quiz_sempre": true
+        },
+        "copertina": null,
+        "didattica": {
+        },
+        "licenza_a": null
+    },
+    {
+        "em": "⚓",
+        "id": "trapani-citta",
+        "cls": "blu",
+        "sub": "Chiese, palazzi, miti e leggende del centro storico: undici luoghi sulla mappa, raccontati a 360° da U Cuntastorie",
+        "tit": "Trapani, la città a forma di falce",
+        "desc": "Un giro nel centro storico di Trapani in undici luoghi. In ogni luogo un racconto a 360°: ci si guarda intorno, si cerca il punto che brilla e si risponde alle domande.",
+        "uuid": "736664e3-c1ff-4d04-bc78-367a949d314d",
+        "stato": "pubblicato",
+        "fascia": "entrambe",
+        "ordine": 25,
+        "lezioni": [
+            {
+                "em": "🕯️",
+                "id": "trapani-cappuccini",
+                "acc": {
+                    "lis": false,
+                    "note": "",
+                    "ipovedenti": true
+                },
+                "cls": "rosa",
+                "sub": "La finta Santa Lucia e le due braccia incrociate dei francescani",
+                "tit": "Tutto al femminile",
+                "luogo": {
+                    "lat": 38.01676,
+                    "lng": 12.50095,
+                    "nome": "Chiesa dei Cappuccini"
+                },
+                "stato": "pubblicata",
+                "durata": "~3 min"
+            },
+            {
+                "em": "🪸",
+                "id": "trapani-santa-lucia",
+                "acc": {
+                    "lis": false,
+                    "note": "",
+                    "ipovedenti": true
+                },
+                "cls": "oro",
+                "sub": "I pescatori di corallo e l’affresco ritrovato",
+                "tit": "La santa dei corallari",
+                "luogo": {
+                    "lat": 38.01702,
+                    "lng": 12.50254,
+                    "nome": "Ex chiesa di Santa Lucia"
+                },
+                "stato": "pubblicata",
+                "durata": "~4 min"
+            },
+            {
+                "em": "⛰️",
+                "id": "trapani-tramontana",
+                "acc": {
+                    "lis": false,
+                    "note": "",
+                    "ipovedenti": true
+                },
+                "cls": "blu",
+                "sub": "Erice, la montagna di Venere, e i riti delle donne per Demetra",
+                "tit": "La montagna è femmina",
+                "luogo": {
+                    "lat": 38.01757,
+                    "lng": 12.50415,
+                    "nome": "Mura di Tramontana"
+                },
+                "stato": "pubblicata",
+                "durata": "~4 min"
+            },
+            {
+                "em": "🌙",
+                "id": "trapani-falce",
+                "acc": {
+                    "lis": false,
+                    "note": "",
+                    "ipovedenti": true
+                },
+                "cls": "verde",
+                "sub": "Il mito che spiega la forma di Trapani e le stagioni",
+                "tit": "La falce di Demetra",
+                "luogo": {
+                    "lat": 38.01693,
+                    "lng": 12.50698,
+                    "nome": "Mura di Tramontana, verso la città"
+                },
+                "stato": "pubblicata",
+                "durata": "~3 min"
+            },
+            {
+                "em": "🦁",
+                "id": "trapani-leone",
+                "acc": {
+                    "lis": false,
+                    "note": "",
+                    "ipovedenti": true
+                },
+                "cls": "rosa",
+                "sub": "La leggenda di Alessandro Ferro, scolpita sopra le nostre teste",
+                "tit": "TITOLO CORRETTO IN REGIA",
+                "luogo": {
+                    "lat": 38.01625,
+                    "lng": 12.508,
+                    "nome": "Palazzo Ferro"
+                },
+                "stato": "pubblicata",
+                "durata": "~2 min"
+            },
+            {
+                "em": "⛪",
+                "id": "trapani-collegio",
+                "acc": {
+                    "lis": false,
+                    "note": "",
+                    "ipovedenti": true
+                },
+                "cls": "oro",
+                "sub": "Tre racconti: la chiesa che rinasce · acqua, terra, aria e fuoco · le sante nel muro",
+                "tit": "Chiesa del Collegio",
+                "luogo": {
+                    "lat": 38.01569,
+                    "lng": 12.50903,
+                    "nome": "Chiesa del Collegio dei Gesuiti"
+                },
+                "stato": "pubblicata",
+                "durata": "~14 min"
+            },
+            {
+                "em": "🗝️",
+                "id": "trapani-senatorio",
+                "acc": {
+                    "lis": false,
+                    "note": "",
+                    "ipovedenti": true
+                },
+                "cls": "blu",
+                "sub": "La Madonna con le chiavi della città e il trucco degli architetti",
+                "tit": "L’asse sacro e profano",
+                "luogo": {
+                    "lat": 38.01536,
+                    "lng": 12.50961,
+                    "nome": "Palazzo Senatorio"
+                },
+                "stato": "pubblicata",
+                "durata": "~2 min"
+            },
+            {
+                "em": "💠",
+                "id": "trapani-rosone",
+                "acc": {
+                    "lis": false,
+                    "note": "",
+                    "ipovedenti": true
+                },
+                "cls": "verde",
+                "sub": "Caruso e i pomodori, poi tre religioni in un rosone",
+                "tit": "Il rosone dei tre popoli",
+                "luogo": {
+                    "lat": 38.01486,
+                    "lng": 12.50982,
+                    "nome": "Chiesa di Sant’Agostino"
+                },
+                "stato": "pubblicata",
+                "durata": "~2 min"
+            },
+            {
+                "em": "🔭",
+                "id": "trapani-carmine",
+                "acc": {
+                    "lis": false,
+                    "note": "",
+                    "ipovedenti": true
+                },
+                "cls": "rosa",
+                "sub": "Gli osservatori delle stelle e la chiesa storta apposta",
+                "tit": "Le stelle e la Venere",
+                "luogo": {
+                    "lat": 38.0169,
+                    "lng": 12.50965,
+                    "nome": "Chiesa del Carmine"
+                },
+                "stato": "pubblicata",
+                "durata": "~3 min"
+            },
+            {
+                "em": "🌹",
+                "id": "trapani-santa-rita",
+                "acc": {
+                    "lis": false,
+                    "note": "",
+                    "ipovedenti": true
+                },
+                "cls": "oro",
+                "sub": "Nonna Gina e la forza delle donne siciliane",
+                "tit": "La santa degli impossibili",
+                "luogo": {
+                    "lat": 38.01755,
+                    "lng": 12.5118,
+                    "nome": "Via Garibaldi"
+                },
+                "stato": "pubblicata",
+                "durata": "~2 min"
+            },
+            {
+                "em": "👑",
+                "id": "trapani-margherita",
+                "acc": {
+                    "lis": false,
+                    "note": "",
+                    "ipovedenti": true
+                },
+                "cls": "blu",
+                "sub": "La regina che dà il nome a un giardino… e a una pizza",
+                "tit": "Margherita, l’ultima donna",
+                "luogo": {
+                    "lat": 38.0176,
+                    "lng": 12.5156,
+                    "nome": "Villa Margherita"
+                },
+                "stato": "pubblicata",
+                "durata": "~1 min"
+            }
+        ],
+        "origine": "proprio",
+        "prologo": "Ciao! Io sono Trapani, la città a forma di falce. Sono piena di storie: basta alzare gli occhi. Te le racconta U Cuntastorie, che queste chiese e questi palazzi li conosce pietra per pietra. Scegli un punto sulla mappa e partiamo!",
+        "mascotte": {
+            "img": "https://www.alessandromilia.it/project/esplora/mascotte.png",
+            "nome": "Trapani",
+            "video": {
+                "junior": {
+                },
+                "senior": {
+                },
+                "entrambi": {
+                }
+            },
+            "junior": true,
+            "senior": true,
+            "quiz_sempre": true
+        },
+        "copertina": null,
+        "didattica": {
+            "mappa": true
+        },
+        "licenza_a": null
+    }
+]

@@ -47,7 +47,8 @@ cp deploy/htaccess-project-edu.txt "$D/edu/.htaccess"
 cp migrazioni/migrazione_completa.sql "$D/migrazioni/"
 cp migrazioni/migrazione_29_rls_consolidata.sql migrazioni/migrazione_30_abbonamenti.sql \
    migrazioni/migrazione_31_elenco_clienti.sql migrazioni/migrazione_32_didattica.sql \
-   migrazioni/migrazione_33_schede_contenuti.sql migrazioni/migrazione_34_chiusura_sicurezza.sql "$D/migrazioni/"
+   migrazioni/migrazione_33_schede_contenuti.sql migrazioni/migrazione_34_chiusura_sicurezza.sql \
+   migrazioni/migrazione_35_clip_tagli_mappa.sql migrazioni/migrazione_36_area_trapani.sql "$D/migrazioni/"
 
 # ---- i passi -----------------------------------------------------------------
 cp deploy/LEGGIMI-METTI-ONLINE.md "$D/"
@@ -58,6 +59,7 @@ err=0
 [ -f "$D/edu/app/debug500.php" ]     && { echo "❌ debug500.php nel pacchetto";  err=1; }
 [ -f "$D/edu/app/stripe-setup.php" ] && { echo "❌ stripe-setup.php nel pacchetto"; err=1; }
 [ -f "$D/edu/app/regia-edu.html" ]   && { echo "❌ regia-edu.html nel pacchetto";   err=1; }
+[ -s "$D/edu/app/lib/leaflet/leaflet.js" ] && [ -s "$D/edu/app/lib/leaflet/leaflet.css" ] || { echo "❌ manca lib/leaflet (la mappa dei corsi non partirebbe)"; err=1; }
 if grep -rIlE "(sk_live_|sk_test_|whsec_)[A-Za-z0-9]{8,}" "$D" >/dev/null 2>&1; then
   echo "❌ una chiave Stripe è finita nel pacchetto"; err=1; fi
 if grep -rIl '"role":"service_role"\|service_role' "$D/edu" | grep -v config.example.php >/dev/null 2>&1; then

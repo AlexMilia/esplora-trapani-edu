@@ -27,7 +27,7 @@ app/            codice che va su Aruba in /project/edu/app/
   debug500.php    diagnostica di deploy — DA CANCELLARE dal server dopo l'uso
   dati/           config.example.php (modello), .htaccess (nega tutto dal web); a runtime: config.php, cache, log, rl/, live/
 deploy/         htaccess-project-edu.txt → va in /project/edu/.htaccess · righe-da-aggiungere-a-config.txt (Stripe)
-migrazioni/     migrazione_19 … 34 (singole) · migrazione_completa.sql (tutte insieme, idempotente) · replica.sql (schema di produzione per i test)
+migrazioni/     migrazione_19 … 36 (singole) · migrazione_completa.sql (tutte insieme, idempotente) · replica.sql (schema di produzione per i test)
 test/           tutte le suite + mock Stripe/Supabase + lanciatori (vedi test/LEGGIMI-TEST.md)
 docs/           manuale tecnico, architettura, relazioni di deploy/audit, guida audio, manuale quiz live, relazione per la finanza agevolata
   didattica/      UDA per il PTOF, guida docente, rubriche, prove di ingresso/uscita, protocollo della sperimentazione

@@ -22,8 +22,9 @@ Tempo: 20 minuti, più i controlli.
 ## 1 · Database (Supabase → SQL Editor)
 
 1. Apri `migrazioni/migrazione_completa.sql`, copia tutto, incolla, **Run**.
-   Contiene le migrazioni 19 → 34 ed è ripetibile: quello che c'è già viene saltato
-   con un avviso «già esiste». Se preferisci andare per passi: 29, 30, 31, 32, 33, 34,
+   Contiene le migrazioni 19 → 36 ed è ripetibile: quello che c'è già viene saltato
+   con un avviso «già esiste». Se preferisci andare per passi: 29, 30, 31, 32, 33, 34, 35, 36
+   (la 36 pubblica l'area Trapani: **solo dopo** aver caricato il player nuovo e la cartella `app/lib/`),
    una alla volta, nell'ordine.
 2. Leggi i messaggi in fondo. Per la **33** (i testi delle schede dentro le lezioni)
    devi vedere una riga per mestiere: *«scheda riempita»*, *«ha già una scheda,

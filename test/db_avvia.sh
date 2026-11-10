@@ -14,7 +14,7 @@ echo "— 1. database $NOME da zero —"
 psql "$ADMIN" -v ON_ERROR_STOP=1 -q -c "drop database if exists $NOME" -c "create database $NOME" 2>>"$LOG"; passo "database ricreato" $?
 psql "$DBURL" -v ON_ERROR_STOP=1 -q -f "$MIG/replica.sql" >/dev/null 2>/tmp/db_err.txt; RC=$?; passo "replica dello schema di produzione (replica.sql)" $RC; [ $RC -ne 0 ] && errori /tmp/db_err.txt
 
-echo "— 2. migrazione_completa.sql (19 → 34) —"
+echo "— 2. migrazione_completa.sql (19 → 36) —"
 psql "$DBURL" -v ON_ERROR_STOP=1 -q -f "$MIG/migrazione_completa.sql" >/dev/null 2>/tmp/db_err.txt; RC=$?; passo "prima applicazione pulita" $RC; [ $RC -ne 0 ] && errori /tmp/db_err.txt
 psql "$DBURL" -v ON_ERROR_STOP=1 -q -f "$MIG/migrazione_completa.sql" >/dev/null 2>/tmp/db_err.txt; RC=$?; passo "seconda applicazione (idempotenza)" $RC; [ $RC -ne 0 ] && errori /tmp/db_err.txt
 
@@ -23,7 +23,7 @@ psql "$DBURL" -q -f "$QUI/fixture_test.sql" >/dev/null 2>/tmp/db_err.txt; RC=$?;
 
 echo "— 4. test SQL con i ruoli reali —"
 # stdbuf tiene in ordine stdout e stderr, così un ERROR resta vicino alla riga "(atteso errore…)" che lo annuncia
-for t in t_rls_matrice.sql t_flusso_tenant.sql t_abbonamenti.sql t_didattica.sql t_schede_seed.sql t_sicurezza.sql; do
+for t in t_rls_matrice.sql t_flusso_tenant.sql t_abbonamenti.sql t_didattica.sql t_schede_seed.sql t_sicurezza.sql t_area_trapani.sql; do
   OUT="$(stdbuf -o0 -e0 psql "$DBURL" -q -At -f "$QUI/$t" 2>&1)"; echo "$OUT" >> "$LOG"
   OKN=$(echo "$OUT" | grep -c '✓'); KON=$(echo "$OUT" | grep -c '❌')
   # errori non annunciati da una riga "(atteso errore" nelle 2 righe precedenti

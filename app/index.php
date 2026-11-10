@@ -10,6 +10,10 @@
    precedente/successiva, 📋 scheda della lezione per il docente, percorso
    della classe nel menu (lezioni fatte + esito), esito del quiz salvato
    come evidenza valutativa, «Prossima lezione» a fine lezione.
+   v2.9: clip con taglio (inizio/fine), voce a parte agganciata al video e
+         sottotitoli da file .vtt; corsi con la MAPPA (didattica.mappa): un
+         segnaposto per lezione, mouse = passa sopra e clic, dito = tocca due
+         volte; elenco e legenda a fianco. Libreria Leaflet in lib/leaflet/.
    v2.8: il tenant non si deduce piu' da una cartella di lavoro. Aprire lo zip
    da /edu/definitiva/index.php faceva credere al player che la scuola si
    chiamasse "definitiva", e schede e compiti rispondevano "licenza non attiva".
@@ -175,6 +179,86 @@ AFRAME.registerComponent('bordi-puliti',{
   .lez.soon p{color:#9a8f7d}
 
   /* selettore livello (Primaria / Medie) */
+  /* ---- corso con la mappa (v2.9): lezioni come punti sul territorio ---- */
+  .card.conmappa{max-width:1320px;padding:18px 20px;text-align:left}
+  .card.conmappa .cimg-mid,.card.conmappa #brandH1+p,.card.conmappa #accNote{display:none}
+  .card.conmappa #brandH1{font-size:22px;margin:0 44px 0 0}
+  .card.conmappa .livsel,.card.conmappa .accsel{display:inline-block;margin:8px 14px 0 0;vertical-align:top}
+  .card.conmappa .livsel .lbl,.card.conmappa .accsel .lbl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .lezioni.mappa{display:block;margin-top:10px}
+  .mp-testa{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:4px 0 10px}
+  .mp-testa h2{font-size:24px;color:var(--ink);margin:0}
+  .mp-testa span{font-size:14px;color:var(--ink);opacity:.75}
+  .mp{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px}
+  .mp-map{position:relative;height:min(660px,calc(88vh - 215px));min-height:320px;border-radius:14px;overflow:hidden;background:#cfe2e8;border:2px solid var(--ink)}
+  #mpLeaf{position:absolute;inset:0;background:#cfe2e8;font-family:inherit}
+  .mp-pin{position:absolute;left:0;top:0;width:0;height:0;border:none;background:none;padding:0;cursor:pointer;font-family:inherit}
+  .mp-pin .dot{position:absolute;left:-17px;top:-17px;width:34px;height:34px;border-radius:50%;background:var(--rosaTxt);color:#fff;
+    font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #fff,0 3px 10px rgba(36,31,28,.35);transition:transform .16s ease}
+  .stretta .mp-pin .dot{left:-12px;top:-12px;width:24px;height:24px;font-size:12px;box-shadow:0 0 0 2px #fff,0 2px 6px rgba(36,31,28,.35)}
+  .stretta .mp-pin .lab{display:none}
+  .stretta .mp-pin.on .lab,.stretta .mp-pin:focus-visible .lab{display:block;transform:none;white-space:normal;max-width:200px}
+  .mp-pin.fatta .dot{background:#2f5c44}
+  .mp-pin.soon .dot{background:#9a8f7d}
+  .mp-pin .lab{position:absolute;white-space:nowrap;text-align:left;background:#fff;color:var(--ink);border:2px solid #d9cdbb;border-radius:9px;
+    padding:4px 9px;font-size:14px;font-weight:700;line-height:1.2;box-shadow:0 3px 10px rgba(36,31,28,.18);transition:transform .16s ease,box-shadow .16s ease}
+  .mp-pin .det{display:none;font-size:11.5px;font-weight:400;color:#54483d;margin-top:1px}
+  .leaflet-marker-icon.mp-ico{background:none;border:none}
+  .leaflet-marker-icon.mp-ico.su{z-index:9000!important}
+  .mp-pin.on .dot,.mp-pin:focus-visible .dot{transform:scale(1.14)}
+  .mp-pin.on .lab,.mp-pin:focus-visible .lab{transform:scale(1.3);border-color:var(--rosaTxt);box-shadow:0 8px 22px rgba(36,31,28,.3)}
+  .mp-pin.on .det,.mp-pin:focus-visible .det{display:block}
+  .mp-pin:focus-visible{outline:none}
+  .mp-pin:focus-visible .dot{outline:3px solid #1f5fa8;outline-offset:3px}
+  .mp-pin.prossima .dot{animation:mpBatte 1.6s ease-in-out infinite}
+  @keyframes mpBatte{0%,100%{box-shadow:0 0 0 3px #fff,0 0 0 3px rgba(184,80,106,.6)}50%{box-shadow:0 0 0 3px #fff,0 0 0 13px rgba(184,80,106,0)}}
+  .mp-apri{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:1000;display:none;align-items:center;gap:14px;background:var(--ink);color:#fff;
+    padding:10px 12px 10px 18px;border-radius:14px;box-shadow:0 10px 28px rgba(0,0,0,.4);max-width:calc(100% - 24px)}
+  .mp-apri.on{display:flex}
+  .mp-apri b{display:block;font-size:17px;line-height:1.2}
+  .mp-apri small{display:block;font-size:13px;opacity:.85}
+  .mp-apri button{flex:none;border:none;background:var(--rosa);color:#fff;font-family:inherit;font-size:16px;font-weight:700;min-height:48px;padding:0 18px;border-radius:10px;cursor:pointer}
+  .mp-lato{display:flex;flex-direction:column;gap:10px;min-width:0;max-height:max(320px,min(660px,calc(88vh - 215px)))}
+  .mp-elenco{flex:1 1 auto;overflow:auto;border-top:1px solid #d9cdbb}
+  .mp-riga{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:6px 6px;border:none;border-bottom:1px solid #d9cdbb;background:none;
+    text-align:left;font-family:inherit;color:var(--ink);cursor:pointer;transition:background .12s ease}
+  .mp-riga .n{flex:none;width:28px;height:28px;border-radius:50%;background:var(--rosaTxt);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .mp-riga.fatta .n{background:#2f5c44}
+  .mp-riga.soon{cursor:default;opacity:.6}
+  .mp-riga.soon .n{background:#9a8f7d}
+  .mp-riga .tx{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+  .mp-riga .rt{font-size:15px;font-weight:700;line-height:1.2}
+  .mp-riga .rl{font-size:12.5px;color:#54483d;line-height:1.25}
+  .mp-riga .st{flex:none;font-size:12.5px;color:#54483d}
+  .mp-riga.fatta .st{color:#2f5c44;font-weight:700}
+  .mp-riga.prossima .st{color:var(--rosaTxt);font-weight:700}
+  .mp-riga.on,.mp-riga:hover{background:#f1e2cf}
+  .mp-riga.on .rt,.mp-riga:hover .rt{color:var(--rosaTxt)}
+  .mp-riga.noacc{opacity:.5}
+  .mp-riga:focus-visible,.mp-apri button:focus-visible{outline:3px solid #1f5fa8;outline-offset:-2px}
+  .mp-leg{flex:none;border:1px solid #cdbfa9;border-radius:10px;padding:8px 12px;display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;font-size:12.5px;color:var(--ink);background:#f3ecdf}
+  .mp-leg div{display:flex;align-items:center;gap:8px}
+  .mp-leg i{flex:none;width:16px;height:16px;border-radius:50%;background:var(--rosaTxt)}
+  .mp-leg i.f{background:#2f5c44}
+  .mp-leg i.p{box-shadow:0 0 0 4px rgba(184,80,106,.3)}
+  .mp-leg i.l{width:30px;height:0;border-radius:0;background:none;border-top:3px dotted var(--rosaTxt)}
+  .mp-leg .lunga{grid-column:span 2}
+  @media(max-width:860px){
+    .mp{grid-template-columns:minmax(0,1fr)}
+    .mp-map{height:46vh;min-height:300px}
+    .mp-lato{max-height:none}
+    .mp-elenco{overflow:visible}
+    .card.conmappa{padding:14px 12px}
+    .card.conmappa #brandH1{display:none}
+    .card.conmappa .livsel .seg button,.card.conmappa .accsel .seg button{font-size:13px;padding:7px 10px}
+    .card.conmappa .accsel .seg{border-radius:16px}
+    .mp-testa h2{font-size:19px}
+    .mp-testa span{font-size:13px}
+    .mp-apri{left:8px;right:8px;transform:none;max-width:none;padding:8px}
+    .mp-apri div{display:none}
+    .mp-apri button{flex:1 1 auto}
+  }
+  @media(prefers-reduced-motion:reduce){.mp-pin.prossima .dot{animation:none}.mp-pin .lab,.mp-pin .dot{transition:none}}
   .livsel{margin-top:16px}
   .livsel .lbl{font-size:13px;color:var(--ink);opacity:.7;display:block;margin-bottom:8px}
   .livsel .seg{display:inline-flex;background:#ece4d6;border-radius:999px;padding:4px;gap:4px}
@@ -659,9 +743,16 @@ async function eduApi(params,post){
 }
 function cacheSet(k,v){ try{localStorage.setItem(k,JSON.stringify({t:Date.now(),v:v}));}catch(e){} }
 function cacheGet(k){ try{const x=JSON.parse(localStorage.getItem(k)||'null'); return x&&x.v||null;}catch(e){return null;} }
+/* ---- CLIP CON TAGLIO, VOCE E SOTTOTITOLI PROPRI (migr. 35) ----
+   da/a  = secondi del video da cui si parte e a cui ci si ferma (0 = dall'inizio / fino alla fine)
+   t0    = secondo del video che corrisponde allo zero di voce e sottotitoli (se manca: da)
+   volv  = volume dell'audio del video, 0-100 (il racconto sta nella traccia a parte)
+   cc    = file .vtt dei sottotitoli, quando non stanno su Bunny */
+function numPos(x){ x=+x; return (isFinite(x)&&x>0)?x:0; }
+function ccUrlOk(u){ u=String(u||'').trim(); return /^https:\/\/[^\s"'<>]+\.vtt(\?[^\s"'<>]*)?$/i.test(u)?u:null; }
 function normalizzaLezione(l){
   l=JSON.parse(JSON.stringify(l));                                  /* copia pulita */
-  l.video=(l.video||[]).filter(v=>v&&v.guid).map(v=>Object.assign(B(v.guid),{lis:(v.lis||v.video_lis||null),audio:(v.audio||null)}));  /* foto360: prossima versione; lis: clip interprete (fix v1.3: prima veniva scartato) */
+  l.video=(l.video||[]).filter(v=>v&&v.guid).map(v=>Object.assign(B(v.guid),{lis:(v.lis||v.video_lis||null),audio:(v.audio||null),da:numPos(v.da),a:numPos(v.a),t0:(v.t0==null?null:(isFinite(+v.t0)?+v.t0:null)),volv:(v.volv==null?null:Math.max(0,Math.min(100,+v.volv||0))),cc:ccUrlOk(v.cc),tit:String(v.tit||'')}));  /* foto360: prossima versione; lis: clip interprete (fix v1.3: prima veniva scartato) */
   (l.tappe||[]).forEach(t=>{t._done=false;(t.hotspots||[]).forEach(h=>h._fatto=false);});
   return l;
 }
@@ -839,8 +930,20 @@ function audioSync(){
 }
 function audioSeek(){                     /* la barra è stata spostata: riallineo */
   if(!_audioCfg||!clipAudio.src||clipAudio.loop)return;
-  try{ clipAudio.currentTime=Math.min(vid.currentTime||0, clipAudio.duration||0); }catch(e){}
+  try{
+    let t=Math.max(0,(vid.currentTime||0)-clipT0());
+    const d=clipAudio.duration;
+    if(isFinite(d)&&d>0)t=Math.min(t,d);          /* prima dei metadati la durata non c'è: non azzerare */
+    clipAudio.currentTime=t;
+  }catch(e){}
 }
+function audioDeriva(){                 /* voce non in loop: se scarta dal video di oltre mezzo secondo, la riallineo */
+  if(!_audioCfg||!clipAudio.src||clipAudio.loop||vid.paused)return;
+  const atteso=(vid.currentTime||0)-clipT0();
+  if(atteso<0)return;
+  if(Math.abs((clipAudio.currentTime||0)-atteso)>0.45)audioSeek();
+}
+vid.addEventListener('timeupdate',audioDeriva);
 function audioDuck(giu){                  /* abbassa mentre parla la mascotte / la voce */
   if(!_audioCfg||!clipAudio.src||_audioCfg.duck===false)return;
   const pieno=Math.max(0,Math.min(1,(_audioCfg.vol==null?45:_audioCfg.vol)/100));
@@ -1079,12 +1182,210 @@ async function salvaEsito(modalita,giuste,tot,extra){
   }catch(e){ return null; }
 }
 
+/* ---- corso con la mappa (v2.9) ----
+   Un corso con didattica.mappa=true e lezioni che portano un luogo {nome,lat,lng}
+   si apre con la mappa: un segnaposto per lezione, con il titolo scritto sopra.
+   · mouse (PC collegato alla lavagna): passando sopra il titolo si ingrandisce, un clic apre
+   · dito o penna (LIM, tablet, telefono): il primo tocco ingrandisce, il secondo apre
+   · la mappa inquadra solo i punti che ci sono, non tutta la provincia
+   · a fianco: elenco e legenda, legati ai segnaposto
+   In modalità ipovedenti resta l'elenco grande di sempre. Se la mappa non si
+   carica (rete della scuola, file mancante) si torna da soli all'elenco. */
+let MP=null, MP_KO=false, _mpLeaflet=null;
+function luogoOk(l){
+  const g=l&&l.luogo; if(!g||typeof g!=='object')return false;
+  const a=Number(g.lat), b=Number(g.lng);
+  return g.lat!==null&&g.lng!==null&&g.lat!==''&&g.lng!==''&&isFinite(a)&&isFinite(b)&&Math.abs(a)<=90&&Math.abs(b)<=180;
+}
+function corsoConMappa(){
+  if(MP_KO||ACC==='ipo'||!CORSO_SEL)return false;
+  const d=CORSO_SEL.didattica;
+  if(!d||d.mappa!==true)return false;
+  return CATALOGO.filter(luogoOk).length>=2;
+}
+function caricaLeaflet(){
+  if(window.L&&window.L.map)return Promise.resolve();
+  if(_mpLeaflet)return _mpLeaflet;
+  _mpLeaflet=new Promise((ok,ko)=>{
+    const base=(window.EDU_BASE||'')+'lib/leaflet/';
+    const css=document.createElement('link'); css.rel='stylesheet'; css.href=base+'leaflet.css?v=194'; document.head.appendChild(css);
+    const s=document.createElement('script'); s.src=base+'leaflet.js?v=194';
+    const t=setTimeout(()=>ko(new Error('tempo scaduto')),9000);
+    s.onload=()=>{ clearTimeout(t); (window.L&&window.L.map)?ok():ko(new Error('Leaflet non valido')); };
+    s.onerror=()=>{ clearTimeout(t); ko(new Error('file non trovato')); };
+    document.head.appendChild(s);
+  });
+  _mpLeaflet.catch(()=>{ _mpLeaflet=null; });
+  return _mpLeaflet;
+}
+function mpDistruggi(){
+  if(!MP)return;
+  try{ if(MP.ro)MP.ro.disconnect(); }catch(e){}
+  try{ if(MP.map)MP.map.remove(); }catch(e){}
+  MP=null;
+}
+function mpEl(tag,cls,txt){ const e=document.createElement(tag); if(cls)e.className=cls; if(txt!==undefined&&txt!==null)e.textContent=txt; return e; }
+function buildMappa(box){
+  const card=box.closest('.card'); if(card)card.classList.add('conmappa');
+  box.classList.add('mappa');
+  const voci=CATALOGO.map((l,i)=>{
+    const soon=(l.stato==='soon')||!!l.soon;
+    return {l:l,i:i,soon:soon,geo:luogoOk(l),st:soon?null:statoLez(l.id)};
+  });
+  const prima=voci.find(v=>!v.soon&&!v.st);            /* la prossima consigliata: la prima non ancora fatta */
+  const fatte=voci.filter(v=>v.st).length;
+  const testa=mpEl('div','mp-testa');
+  const ind=box.querySelector('.tbtn'); if(ind){ ind.style.cssText=''; testa.appendChild(ind); }
+  testa.appendChild(mpEl('h2',null,CORSO_SEL.tit||'Le lezioni'));
+  testa.appendChild(mpEl('span',null,voci.length+(voci.length===1?' lezione':' lezioni')+(fatte?' · '+fatte+(fatte===1?' fatta':' fatte'):'')+' · scegliete un punto sulla mappa'));
+  box.appendChild(testa);
+  const mp=mpEl('div','mp'), mw=mpEl('div','mp-map'), leaf=mpEl('div'); leaf.id='mpLeaf';
+  leaf.setAttribute('role','group'); leaf.setAttribute('aria-label','Mappa delle lezioni');
+  mw.appendChild(leaf);
+  const apri=mpEl('div','mp-apri'); apri.setAttribute('role','status');
+  const apTx=mpEl('div'), apB=mpEl('b'), apS=mpEl('small'); apTx.appendChild(apB); apTx.appendChild(apS);
+  const apBtn=mpEl('button',null,'▶ Apri la lezione'); apBtn.type='button';
+  apri.appendChild(apTx); apri.appendChild(apBtn); mw.appendChild(apri);
+  const lato=mpEl('div','mp-lato'), elenco=mpEl('div','mp-elenco');
+  MP={map:null,ro:null,voci:voci,sel:-1,ptr:'mouse',apri:apri,apB:apB,apS:apS,leaf:leaf,elenco:elenco};
+  let n=0;
+  voci.forEach((v,k)=>{
+    const l=v.l; if(v.geo)n++; v.num=v.geo?n:0;
+    v.cls=(v.soon?' soon':'')+(v.st?' fatta':'')+(v===prima?' prossima':'')+((!v.soon&&!lezAccOk(l))?' noacc':'');
+    v.luogo=(l.luogo&&l.luogo.nome)?String(l.luogo.nome):'';
+    v.det=[v.luogo,(l.durata||'')].filter(Boolean).join(' · ');
+    v.voce='Lezione '+(k+1)+', '+l.tit+(v.luogo?', '+v.luogo:'')+(v.soon?', prossimamente':v.st?', già fatta':v===prima?', prossima consigliata':'');
+    const r=mpEl('button','mp-riga'+v.cls); r.type='button'; if(v.soon)r.disabled=true;
+    r.appendChild(mpEl('span','n',v.geo?String(v.num):'•'));
+    const tx=mpEl('span','tx'); tx.appendChild(mpEl('span','rt',l.tit)); tx.appendChild(mpEl('span','rl',v.det)); r.appendChild(tx);
+    r.appendChild(mpEl('span','st',v.soon?'🔒':v.st?('✓ fatta'+(v.st.pct!==null&&v.st.pct!==undefined?' · '+v.st.pct+'%':'')):(v===prima?'prossima':'')));
+    r.setAttribute('aria-label',v.voce);
+    v.riga=r; mpAggancia(r,k,true); elenco.appendChild(r);
+  });
+  lato.appendChild(elenco);
+  const leg=mpEl('div','mp-leg'); leg.setAttribute('aria-label','Legenda');
+  [['','Lezione da fare'],['f','Lezione fatta'],['p','Prossima consigliata'],['l','Ordine del percorso']].forEach(([c,t])=>{
+    const d=mpEl('div'); d.appendChild(mpEl('i',c)); d.appendChild(mpEl('span',null,t)); leg.appendChild(d);
+  });
+  leg.appendChild(mpEl('div','lunga','Sulla mappa, con il mouse: passate sopra e fate clic. Con il dito: un tocco ingrandisce, il secondo apre.'));
+  lato.appendChild(leg);
+  mp.appendChild(mw); mp.appendChild(lato); box.appendChild(mp);
+  apBtn.onclick=()=>{ if(MP&&MP.sel>=0)mpApri(MP.sel); };
+  const mio=MP;
+  caricaLeaflet().then(()=>{ if(MP===mio&&document.body.contains(leaf))mpDisegna(); })
+    .catch(e=>{ console.log('[MAPPA] non disponibile, torno all\'elenco:',e&&e.message); if(MP===mio){ MP_KO=true; buildMenu(); } });
+}
+function mpAggancia(el,k,riga){
+  el.addEventListener('pointerdown',e=>{ if(MP)MP.ptr=(e.pointerType||'mouse'); });
+  el.addEventListener('keydown',e=>{ if(MP&&(e.key==='Enter'||e.key===' '))MP.ptr='mouse'; });
+  el.addEventListener('pointerenter',e=>{ if((e.pointerType||'mouse')==='mouse')mpEvid(k,true); });
+  el.addEventListener('pointerleave',e=>{ if((e.pointerType||'mouse')==='mouse')mpEvid(k,false); });
+  el.addEventListener('focus',()=>mpEvid(k,true));
+  el.addEventListener('blur',()=>mpEvid(k,false));
+  el.addEventListener('click',e=>{ e.stopPropagation(); if(riga)mpApri(k); else mpTocco(k); });   /* nell'elenco il titolo si legge già: un tocco apre */
+  el.addEventListener('dblclick',e=>e.stopPropagation());   /* due tocchi svelti non devono ingrandire la mappa */
+}
+function mpEvid(k,on){
+  if(!MP)return; const v=MP.voci[k]; if(!v)return;
+  const acceso=on||MP.sel===k;
+  if(v.riga)v.riga.classList.toggle('on',acceso);
+  if(v.pin){ v.pin.classList.toggle('on',acceso); const ic=v.pin.closest('.mp-ico'); if(ic)ic.classList.toggle('su',acceso); }
+  if(acceso&&MP.leaf.classList.contains('stretta'))mpEtichette();   /* su telefono il titolo compare ora: va messo dentro la mappa */
+}
+function mpSel(k){
+  if(!MP)return; const prima=MP.sel; MP.sel=k;
+  if(prima>=0&&prima!==k)mpEvid(prima,false);
+  if(k<0){ MP.apri.classList.remove('on'); return; }
+  const v=MP.voci[k]; mpEvid(k,true);
+  MP.apB.textContent=v.l.tit; MP.apS.textContent=v.det||'Tocca ancora per aprire';
+  MP.apri.classList.add('on');
+  if(MP.map&&v.geo){ try{ if(!MP.map.getBounds().pad(-0.03).contains(v.ll))MP.map.panTo(v.ll); }catch(e){} }
+  /* la riga scorre in vista solo se l'elenco ha la sua barra: su telefono spostare la pagina porterebbe via la mappa */
+  if(v.riga&&MP.elenco.scrollHeight>MP.elenco.clientHeight+2){ try{ MP.elenco.scrollTop=Math.max(0,v.riga.offsetTop-MP.elenco.offsetTop-MP.elenco.clientHeight/2+v.riga.offsetHeight/2); }catch(e){} }
+}
+function mpTocco(k){
+  if(!MP)return; const v=MP.voci[k]; if(!v||v.soon)return;
+  /* mouse o tastiera: si apre subito. Dito o penna: il primo tocco ingrandisce, il secondo apre */
+  if(MP.ptr==='mouse'||MP.sel===k)mpApri(k); else mpSel(k);
+}
+function mpApri(k){
+  if(!MP)return; const v=MP.voci[k]; if(!v||v.soon)return;
+  if(!lezAccOk(v.l)&&!confirm((ACC==='lis'?'Per questa lezione il video LIS non è ancora pronto.':'Questa lezione non è ancora adattata per ipovedenti.')+'\nAvviarla comunque?'))return;
+  avviaLezione(v.i);
+}
+function mpDisegna(){
+  if(!MP||MP.map)return;
+  const L=window.L, geo=MP.voci.filter(v=>v.geo);
+  geo.forEach(v=>{ v.ll=L.latLng(Number(v.l.luogo.lat),Number(v.l.luogo.lng)); });
+  const map=L.map(MP.leaf,{zoomSnap:0.25,zoomDelta:0.5,maxZoom:19,minZoom:3,scrollWheelZoom:false,doubleClickZoom:false,attributionControl:true,keyboard:false});
+  MP.map=map;
+  map.attributionControl.setPrefix('');
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,
+    attribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'}).addTo(map);
+  if(geo.length>1)L.polyline(geo.map(v=>v.ll),{color:'#b8506a',weight:3,dashArray:'2 9',lineCap:'round',interactive:false}).addTo(map);
+  geo.forEach(v=>{
+    const k=MP.voci.indexOf(v);
+    const b=mpEl('button','mp-pin'+v.cls); b.type='button'; b.setAttribute('aria-label',v.voce);
+    b.appendChild(mpEl('span','dot',String(v.num)));
+    const lab=mpEl('span','lab'); lab.appendChild(mpEl('span',null,v.l.tit)); lab.appendChild(mpEl('span','det',v.det)); b.appendChild(lab);
+    v.pin=b; v.lab=lab; mpAggancia(b,k);
+    L.marker(v.ll,{icon:L.divIcon({className:'mp-ico',html:b,iconSize:[0,0]}),keyboard:false,interactive:true,riseOnHover:false,zIndexOffset:(v.cls.indexOf('prossima')>=0?500:0)}).addTo(map);
+  });
+  map.on('click',()=>mpSel(-1));
+  const inquadra=()=>{
+    if(!MP||MP.map!==map)return;
+    map.invalidateSize(false);
+    const w=MP.leaf.clientWidth||0, stretta=!!w&&w<520;
+    MP.leaf.classList.toggle('stretta',stretta);     /* telefono: i titoli compaiono uno alla volta */
+    const m=stretta?[26,26]:[110,64];                /* margine per le etichette */
+    map.fitBounds(L.latLngBounds(geo.map(v=>v.ll)),{paddingTopLeft:[m[0],m[1]],paddingBottomRight:[m[0],m[1]],maxZoom:18,animate:false});
+    mpEtichette();
+  };
+  map.on('zoomend',mpEtichette);
+  inquadra();
+  if(window.ResizeObserver){ let t=0; MP.ro=new ResizeObserver(()=>{ clearTimeout(t); t=setTimeout(inquadra,120); }); MP.ro.observe(MP.leaf); }
+  if(MP.sel>=0)mpEvid(MP.sel,true);
+}
+/* Dove mettere ogni titolo perché non copra né i segnaposto né gli altri titoli:
+   si provano otto posizioni attorno al punto e si tiene la prima libera
+   (se nessuna è libera, quella che copre meno). */
+function mpEtichette(){
+  if(!MP||!MP.map)return;
+  const map=MP.map, geo=MP.voci.filter(v=>v.geo&&v.lab), W=MP.leaf.clientWidth||0, H=MP.leaf.clientHeight||0;
+  const stretta=MP.leaf.classList.contains('stretta'), punti=[];
+  geo.forEach(v=>{ v.p=map.latLngToContainerPoint(v.ll); punti.push({x:v.p.x-20,y:v.p.y-20,w:40,h:40,di:v}); v.box=null; });
+  const sopra=(a,b)=>Math.max(0,Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x))*Math.max(0,Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y));
+  const scegli=v=>{
+    const w=v.lab.offsetWidth||(String(v.l.tit||'').length*8+22), h=v.lab.offsetHeight||28, g=stretta?18:23;
+    const prove=[['e',g,-h/2,'left center'],['w',-g-w,-h/2,'right center'],['n',-w/2,-g-h,'center bottom'],['s',-w/2,g,'center top'],
+                 ['ne',16,-16-h,'left bottom'],['se',16,16,'left top'],['nw',-16-w,-16-h,'right bottom'],['sw',-16-w,16,'right top'],
+                 ['n2',-14,-g-h,'left bottom'],['n3',14-w,-g-h,'right bottom'],['s2',-14,g,'left top'],['s3',14-w,g,'right top']];
+    let meglio=null;
+    prove.forEach((c,ci)=>{
+      const r={x:v.p.x+c[1],y:v.p.y+c[2],w:w,h:h,di:v};
+      let costo=ci*0.01;
+      if(!stretta){                                     /* su telefono se ne vede uno solo: conta solo stare dentro */
+        punti.forEach(o=>{ if(o.di!==v)costo+=sopra(r,o)*3; });
+        geo.forEach(o=>{ if(o!==v&&o.box)costo+=sopra(r,o.box); });
+      }
+      if(W&&H){ if(r.x<4)costo+=(4-r.x)*h*4; if(r.y<4)costo+=(4-r.y)*w*4; if(r.x+w>W-4)costo+=(r.x+w-W+4)*h*4; if(r.y+h>H-4)costo+=(r.y+h-H+4)*w*4; }
+      if(!meglio||costo<meglio.costo)meglio={costo:costo,c:c,r:r};
+    });
+    v.box=meglio.r;
+    v.lab.style.left=meglio.c[1]+'px'; v.lab.style.top=meglio.c[2]+'px'; v.lab.style.transformOrigin=meglio.c[3];
+    v.lab.dataset.pos=meglio.c[0];
+  };
+  for(let giro=0;giro<(stretta?1:4);giro++)geo.forEach(scegli);   /* dal secondo giro ognuno si sistema sapendo dove stanno gli altri */
+}
+
+
 /* ---- menu lezioni ---- */
 function scegliCorso(i){ CORSO_SEL=CORSI[i]; CATALOGO=CORSO_SEL.lezioni||[]; applicaMascotteCorso(CORSO_SEL); buildMenu(); say(CORSO_SEL.tit+': scegliete la lezione!',true); }
 function tuttiICorsi(){ CORSO_SEL=null; CATALOGO=[]; buildMenu(); }
 function buildMenu(){
   updNav();                      /* ‹ › coerenti anche prima di aprire una lezione (migr. 32) */
   const box=document.getElementById('menuLez'); box.textContent='';
+  mpDistruggi(); box.classList.remove('mappa'); { const c=box.closest('.card'); if(c)c.classList.remove('conmappa'); }   /* v2.9 */
   if(LICENZA_KO){ mostraLicenza(LICENZA_KO); return; }
   /* Fase 2: più corsi → prima le card dei corsi */
   if(CORSI.length>1&&!CORSO_SEL){
@@ -1105,6 +1406,7 @@ function buildMenu(){
     const back=document.createElement('button'); back.className='tbtn'; back.style.cssText='grid-column:1/-1;justify-self:start;margin-bottom:4px';
     back.textContent='← Tutti i corsi'; back.onclick=tuttiICorsi; box.appendChild(back);
   }
+  if(corsoConMappa()){ buildMappa(box); return; }      /* v2.9: le lezioni sono punti sulla mappa */
   if(ACC==='ipo'&&!box.dataset.letto){ box.dataset.letto='1'; tts('Scegliete la lezione di oggi. Le lezioni sono: '+CATALOGO.filter(l=>l.stato!=='soon').map((l,i)=>(i+1)+', '+l.tit).join('. ')); }
   if(!CATALOGO.length){
     const p=document.createElement('p');
@@ -1155,10 +1457,19 @@ function vaiMenu(){
 }
 
 /* ---- sorgente video ---- */
+let _clipFinita=false;
+function clipCorr(){ return (LEZ&&LEZ.video&&LEZ.video[vidIdx])||null; }
+function clipDa(){ const v=clipCorr(); return (v&&v.da>0)?v.da:0; }
+function clipA(){ const v=clipCorr(), d=vid.duration||0; return (v&&v.a>0&&v.a>clipDa()&&(!d||v.a<d))?v.a:d; }
+function clipT0(){ const v=clipCorr(); return (v&&v.t0!=null)?v.t0:clipDa(); }
 function attach(v){
+  _clipFinita=false;
+  const da=(v&&v.da>0)?v.da:0;
+  try{ vid.volume=(v&&v.volv!=null)?v.volv/100:1; }catch(e){}
+  if(da){ vid.addEventListener('loadedmetadata',()=>{ try{ if((vid.currentTime||0)<da-0.25)vid.currentTime=da; }catch(e){} },{once:true}); }
   if(_hls){try{_hls.destroy();}catch(e){}_hls=null;}
   if(window.Hls&&Hls.isSupported()){
-    _hls=new Hls(); _hls.loadSource(v.hls); _hls.attachMedia(vid);
+    _hls=new Hls(da?{startPosition:da}:{}); _hls.loadSource(v.hls); _hls.attachMedia(vid);
     _hls.on(Hls.Events.ERROR,(e,d)=>{ if(d&&d.fatal){ try{_hls.destroy();}catch(x){} _hls=null; vid.src=v.mp4; vid.load(); vid.play().catch(()=>{});} });
   }else if(vid.canPlayType('application/vnd.apple.mpegurl')){ vid.src=v.hls; }
   else{ vid.src=v.mp4; }
@@ -1210,17 +1521,28 @@ vid.addEventListener('timeupdate',()=>{
   const t=LEZ.tappe.find(x=>x.v===vidIdx && !x._done && vid.currentTime>=x.t);
   if(t)apriTappa(t);
 });
-vid.addEventListener('ended',()=>{
-  if(!started||!LEZ)return;
+function fineClip(){
+  if(!started||!LEZ||_clipFinita)return;
+  _clipFinita=true;
   vidIdx++;
   if(vidIdx<LEZ.video.length){
     attach(LEZ.video[vidIdx]);
     audioAttach(LEZ.video[vidIdx]);
     vid.play().catch(()=>{});
-    say('Si continua il viaggio…');
+    say(LEZ.video[vidIdx].tit?('Si continua: '+LEZ.video[vidIdx].tit):'Si continua il viaggio…');
     updSeekbar(); loadCC();
   }else{
+    try{ vid.pause(); }catch(e){}
     avviaQuiz();
+  }
+}
+vid.addEventListener('ended',fineClip);
+vid.addEventListener('timeupdate',()=>{      /* il taglio in coda: la clip finisce prima del video */
+  if(!started||!LEZ||_clipFinita)return;
+  const v=clipCorr(); if(!v||!(v.a>0))return;
+  if((vid.currentTime||0)>=v.a && v.a>clipDa()){
+    if(tappaAttiva)return;                   /* c'è una fermata aperta: prima si chiude quella */
+    fineClip();
   }
 });
 
@@ -1468,7 +1790,7 @@ function updPausaBtn(){ document.getElementById('btnPausa').innerHTML=vid.paused
         allo schermo è impossibile da centrare col dito (migr. 32) ---- */
 function saltaVideo(s){
   if(!started||!vid.duration)return;
-  vid.currentTime=Math.max(0,Math.min(vid.duration-0.3,(vid.currentTime||0)+s));
+  vid.currentTime=Math.max(clipDa(),Math.min(clipA()-0.3,(vid.currentTime||0)+s));
   audioSeek(); if(ACC==='lis')lisSync(true);
   updSeekbar();
   say(s<0?('Torniamo indietro di '+Math.abs(s)+' secondi'):('Andiamo avanti di '+s+' secondi'));
@@ -1789,20 +2111,23 @@ function fmt(x){x=Math.max(0,Math.floor(x||0));return String(Math.floor(x/60)).p
 function updSeekbar(){
   document.getElementById('seekbar').style.display=started?'flex':'none';
   const c=document.getElementById('seekClip');
-  c.textContent=(LEZ&&LEZ.video.length>1)?('clip '+(vidIdx+1)+'/'+LEZ.video.length):'';
+  const _ct=(LEZ&&LEZ.video[vidIdx]&&LEZ.video[vidIdx].tit)||'';
+  c.textContent=(LEZ&&LEZ.video.length>1)?('clip '+(vidIdx+1)+'/'+LEZ.video.length+(_ct?' · '+_ct:'')):'';
 }
 vid.addEventListener('timeupdate',()=>{
-  if(!seeking&&vid.duration)seekEl.value=Math.floor(vid.currentTime/vid.duration*1000);
-  document.getElementById('seekTime').textContent=fmt(vid.currentTime)+' / '+(vid.duration?fmt(vid.duration):'--:--');
+  const _da=clipDa(), _a=clipA(), _lung=Math.max(0,_a-_da);
+  if(!seeking&&_lung)seekEl.value=Math.max(0,Math.min(1000,Math.floor(((vid.currentTime||0)-_da)/_lung*1000)));
+  document.getElementById('seekTime').textContent=fmt((vid.currentTime||0)-_da)+' / '+(_lung?fmt(_lung):'--:--');
 });
 seekEl.addEventListener('input',()=>{seeking=true;});
 seekEl.addEventListener('change',()=>{
-  if(vid.duration)vid.currentTime=seekEl.value/1000*vid.duration;
+  const _da=clipDa(), _a=clipA();
+  if(_a>_da)vid.currentTime=_da+seekEl.value/1000*(_a-_da);
   seeking=false;
 });
 
 /* ---- sottotitoli (file Bunny: /captions/{lingua}.vtt) ---- */
-let ccLang='off', ccCues=[];
+let ccLang='off', ccCues=[], ccOff=0;
 function toggleCCMenu(){
   const m=document.getElementById('ccMenu');
   m.style.display=(m.style.display==='flex')?'none':'flex';
@@ -1827,6 +2152,17 @@ async function loadCC(){
   ccCues=[]; renderCue('');
   if(ccLang==='off'||!LEZ)return;
   const v=LEZ.video[vidIdx]; if(!v)return;
+  ccOff=0;
+  if(v.cc){                                  /* file .vtt della clip: i tempi sono quelli della voce */
+    if(ccLang!=='it'){ renderCue('Per questo racconto i sottotitoli ci sono solo in italiano'); setTimeout(()=>{ if(!ccCues.length)renderCue(''); },3000); return; }
+    try{
+      const r=await fetch(v.cc);
+      if(r.ok){ const cues=parseVTT(await r.text()); if(cues.length){ ccCues=cues; ccOff=clipT0(); return; } }
+    }catch(e){ console.log('[CC] file della clip non raggiungibile:',v.cc); }
+    renderCue('Sottotitoli non disponibili per questo racconto');
+    setTimeout(()=>{ if(!ccCues.length)renderCue(''); },3000);
+    return;
+  }
   const key=v.guid+'|'+ccLang;
   const vars=_ccFound[key]?[_ccFound[key]]:(CC_VAR[ccLang]||[ccLang]);
   let lastErr='404';
@@ -1872,7 +2208,8 @@ function renderCue(t){
 }
 vid.addEventListener('timeupdate',()=>{
   if(ccLang==='off'||!ccCues.length)return;
-  const c=ccCues.find(x=>vid.currentTime>=x.t0&&vid.currentTime<=x.t1);
+  const _t=(vid.currentTime||0)-ccOff;
+  const c=ccCues.find(x=>_t>=x.t0&&_t<=x.t1);
   renderCue(c?c.text:'');
 });
 

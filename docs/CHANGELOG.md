@@ -1,5 +1,37 @@
 # Registro delle modifiche
 
+## 10/11/2026 — terza area: «Trapani, la città a forma di falce» · player v2.9 · migrazioni 35 e 36
+
+Terzo caso di studio per le scuole, dopo Antichi Mestieri e Il viaggio di una goccia: undici luoghi del centro storico di Trapani raccontati a 360° da U Cuntastorie. I video erano già su Bunny (girati durante una camminata in città); qui diventano lezioni, **senza nessun riferimento all'evento** in cui sono stati girati.
+
+### Il corso si apre con una mappa — player v2.9
+- Un corso con `didattica.mappa = true`, le cui lezioni portano `didattica.luogo = {nome, lat, lng}`, non mostra le card ma una **mappa**: un segnaposto numerato per lezione, con il titolo scritto sopra.
+- **Mouse** (PC collegato alla lavagna): passando sopra il titolo si ingrandisce e compare il luogo; un clic apre. **Dito o penna** (LIM, tablet): il primo tocco ingrandisce e fa comparire il tasto «Apri la lezione», il secondo apre. Il tipo di puntatore si legge a ogni tocco, quindi sulla stessa lavagna funzionano entrambi.
+- La mappa **inquadra solo i punti presenti** (non la provincia) e si riadatta se la finestra cambia. I titoli si dispongono da soli attorno ai punti per non coprirsi.
+- A fianco: **elenco** delle lezioni (legato ai segnaposto: passando su una riga si accende il punto, e viceversa) e **legenda**. Fatta / prossima consigliata / da fare vengono dal diario della classe.
+- Telefono: mappa sopra, elenco sotto; sulla mappa i titoli compaiono uno alla volta al tocco.
+- **Modalità ipovedenti**: niente mappa, resta l'elenco grande con la lettura vocale. Se la libreria della mappa non si carica (rete della scuola), il player torna da solo all'elenco.
+- Leaflet 1.9.4 sta in `app/lib/leaflet/` (nessun CDN). Lo sfondo sono i tasselli di OpenStreetMap, con la citazione obbligatoria: è l'unica chiamata verso l'esterno in più, e parte solo aprendo un corso con la mappa.
+
+### La clip con taglio, voce a parte e sottotitoli propri — player v2.9 + migrazione 35
+- `edu_media` ha cinque colonne nuove, tutte facoltative: `inizio_s`, `fine_s` (taglio), `sync_s` (il secondo del video che vale «zero» per voce e sottotitoli), `vol_video` (volume dell'audio del video), `cc_url` (sottotitoli in un file `.vtt`). Le lezioni di prima non cambiano.
+- Il player parte da `inizio_s`, chiude la clip a `fine_s`, tiene la voce (`audio_url`, non in ciclo) agganciata al video e la riallinea se scarta più di 0,45 s; barra, tempo e ±10 s lavorano dentro il taglio.
+- La migrazione **innesta** le righe nuove nelle funzioni che trova in archivio (`edu_assembla_lezione`, `edu_get_corsi`, `edu_duplica_corso`) invece di riscriverle: non può riportare indietro una funzione che in produzione è più avanti. Se un punto d'innesto non c'è si ferma senza cambiare nulla.
+- I campi nuovi **non sono ancora modificabili dalla regia**: per ora si scrivono con la migrazione.
+
+### I contenuti — migrazione 36 (generata da `strumenti/genera_area_trapani.py`)
+- Corso `trapani-citta` del tenant vetrina, pubblicato, a catalogo, ordine 25. **11 lezioni, 13 racconti**: più racconti nello stesso luogo fanno una lezione sola (la chiesa del Collegio ne ha tre). Le due Mura di Tramontana restano due lezioni: sono a 250 metri.
+- Esclusi il racconto che presentava il giro e la ginnastica in piazza. Tagliati i due punti in cui la voce parla dell'evento (l'apertura di Sant'Agostino, l'inizio e il saluto finale di Villa Margherita). Il generatore **si ferma** se in un testo trova una parola dell'evento.
+- Per ogni racconto: fermate con il punto «?» già validato e due testi (primaria/medie); due domande per livello a racconto, con la risposta giusta in posizioni diverse.
+- Ripetibile e prudente: se il corso esiste già non tocca nulla, quindi le correzioni fatte in regia restano.
+- Voce e sottotitoli restano nei file del sito della camminata (`/project/attenti-a-quei-due/ver2/`): **se quella cartella viene spostata o cancellata, le lezioni restano senza voce.**
+
+### Test
+`t_clip.js` (39), `t_mappa.js` (54, Leaflet finto), `t_mappa_browser.sh` (26, Chromium vero: hover, doppio tocco, telefono), `t_area_trapani.sql` (32, con il ruolo `anon` come il player). Ogni test è stato visto fallire sul codice sbagliato prima di passare su quello giusto.
+
+### Ordine di messa online
+1. Caricare `app/index.php` e la cartella `app/lib/`. 2. Applicare la migrazione 35, poi la 36. 3. Cancellare `app/dati/cache_*.json`. **Mai la 36 prima del player nuovo**: quello vecchio mostrerebbe i video senza tagli e con la voce fuori tempo.
+
 ## 07/11/2026 (pomeriggio) — chiusura: due revisioni indipendenti, migrazione 34, pacchetto per Aruba
 
 Prima di chiudere, il lavoro degli ultimi due giorni è stato riletto da due revisori che non lo avevano scritto: uno sulla logica delle modifiche, uno solo sulla sicurezza di tutta la cartella `app/` e delle migrazioni. Ogni segnalazione è stata verificata nel codice prima di essere accettata. Qui sotto quello che era vero e come è stato chiuso.
