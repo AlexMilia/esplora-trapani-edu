@@ -141,4 +141,15 @@ update edu_media set cc_url = 'javascript:alert(1)' where id = (select m.id from
 select _ok('le lezioni di prima non hanno tagli: si vedono come sempre',
   not exists (select 1 from edu_media m where m.lezione_id not in (select id from _tp_lez) and (m.inizio_s is not null or m.fine_s is not null or m.cc_url is not null)));
 
+\echo '=== 7. migr. 38: il menu dei corsi sa quali lezioni hanno la LIS ==='
+update edu_media set video_lis = 'aa2bf8b1-446d-494e-9434-6bd0d49dc17a'
+ where lezione_id = (select id from _tp_lez where slug = 'trapani-collegio') and ordine in (1, 2);
+set role anon;
+select _ok('l''elenco conta le clip con LIS (2 su 3 al Collegio)',
+  (select (l->'acc'->>'lis_clip')::int = 2 and (l->'acc'->>'n_clip')::int = 3 from jsonb_array_elements(edu_get_corsi('prova-trapani')) x, jsonb_array_elements(x->'lezioni') l where l->>'id' = 'trapani-collegio'));
+select _ok('una lezione senza LIS porta zero, non un valore mancante',
+  (select (l->'acc'->>'lis_clip')::int = 0 and (l->'acc'->>'n_clip')::int = 1 from jsonb_array_elements(edu_get_corsi('prova-trapani')) x, jsonb_array_elements(x->'lezioni') l where l->>'id' = 'trapani-leone'));
+select _ok('il resto dell''accessibilità non si perde', (select (l->'acc'->>'ipovedenti')::boolean from jsonb_array_elements(edu_get_corsi('prova-trapani')) x, jsonb_array_elements(x->'lezioni') l where l->>'id' = 'trapani-leone'));
+reset role;
+
 drop view _tp_testi; drop view _tp_lez;
